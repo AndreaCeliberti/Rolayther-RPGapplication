@@ -2,6 +2,7 @@ import { Card } from "react-bootstrap";
 import { Link } from "react-router-dom";
 
 export default function MasterCard({ master }) {
+  
   return (
     <Card as={Link}
       to={`/masters/${master.masterId}`}

@@ -136,3 +136,98 @@ button:focus-visible {
   padding-left: 10px !important;
   padding-right: 10px !important;
 }
+/* contenitore */
+.nav-folders {
+  gap: .4rem;
+  position: relative;
+  padding-bottom: .35rem;
+}
+
+.nav-folders::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: rgba(255,255,255,.08);
+}
+
+/* cartelle */
+.nav-folders .nav-link {
+  position: relative;
+  border-radius: 14px 14px 8px 8px;
+  padding: .55rem .9rem;
+  color: rgba(255,255,255,.75);
+  transition: all .2s ease;
+  background: rgba(255,255,255,.03);
+  border: 1px solid rgba(255,255,255,.08);
+}
+
+/* linguetta */
+.nav-folders .nav-link::before {
+  content: "";
+  position: absolute;
+  left: 12px;
+  top: -8px;
+  width: 42px;
+  height: 14px;
+  border-radius: 12px 12px 0 0;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.08);
+  border-bottom: none;
+  transition: all .2s ease;
+}
+
+/* HOVER neon */
+.nav-folders .nav-link:hover {
+  color: #fff;
+  transform: translateY(-2px);
+  background: linear-gradient(
+    180deg,
+    rgba(176, 38, 255, .30),
+    rgba(176, 38, 255, .12)
+  );
+  border-color: #B026FF;
+  box-shadow:
+    0 0 8px #B026FF,
+    0 0 18px rgba(176, 38, 255, .8),
+    0 0 35px rgba(176, 38, 255, .5);
+}
+
+.nav-folders .nav-link:hover::before {
+  background: rgba(176, 38, 255, .45);
+  border-color: #B026FF;
+  box-shadow:
+    0 0 10px #B026FF,
+    0 0 20px rgba(176, 38, 255, .7);
+}
+
+/* ACTIVE (pagina corrente) */
+.nav-folders .nav-link.active {
+  color: #fff;
+  background: linear-gradient(
+    180deg,
+    rgba(176, 38, 255, .45),
+    rgba(176, 38, 255, .18)
+  );
+  border-color: #B026FF;
+  box-shadow:
+    0 0 12px #B026FF,
+    0 0 28px rgba(176, 38, 255, .9),
+    0 0 45px rgba(176, 38, 255, .6);
+}
+
+.nav-folders .nav-link.active::before {
+  background: rgba(176, 38, 255, .65);
+  border-color: #B026FF;
+}
+@keyframes neonPulse {
+  0% { box-shadow: 0 0 8px #B026FF, 0 0 20px rgba(176, 38, 255, .6); }
+  50% { box-shadow: 0 0 16px #B026FF, 0 0 40px rgba(176, 38, 255, 1); }
+  100% { box-shadow: 0 0 8px #B026FF, 0 0 20px rgba(176, 38, 255, .6); }
+}
+
+.nav-folders .nav-link.active {
+  animation: neonPulse 2s infinite ease-in-out;
+}

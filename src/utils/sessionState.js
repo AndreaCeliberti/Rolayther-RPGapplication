@@ -8,7 +8,7 @@ export const SESSION_STATES = {
 };
 
 export const STATE_LABELS = {
-  0: "Bozza",
+  0: "In Arrivo",
   1: "Pubblicata",
   2: "Piena",
   3: "In corso",
@@ -34,10 +34,10 @@ export function stateBadgeVariant(state) {
   }
 }
 export const ALLOWED_TRANSITIONS = {
-  0: [1, 5],     // Draft -> Published, Cancelled
-  1: [2, 5],     // Published -> Full, Cancelled
-  2: [3, 5],     // Full -> InProgress, Cancelled
-  3: [4],        // InProgress -> Completed
+  0: [1, 2, 3,4, 5],     // Draft -> Published, Cancelled
+  1: [0, 2, 3, 4, 5],     // Published -> Full, Cancelled
+  2: [0, 1, 3, 4, 5],     // Full -> InProgress, Cancelled
+  3: [0, 1, 2, 4, 5],        // InProgress -> Completed
   4: [],         // Completed -> none
   5: [],         // Cancelled -> none
 };

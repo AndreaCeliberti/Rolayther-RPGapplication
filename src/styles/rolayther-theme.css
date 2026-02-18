@@ -36,7 +36,7 @@ body{
   background-attachment: fixed;
 }
 
-/* ✅ layout per footer sempre in fondo */
+/*  layout per footer sempre in fondo */
 .app-shell{
   min-height: 100%;
   display: flex;
@@ -123,10 +123,10 @@ a:hover{ color: var(--primary); }
   border-bottom: 1px solid rgba(255,255,255,.06);
   backdrop-filter: blur(10px);
 }
-.navbar .nav-link{
+.navbar {
   color: rgba(243,240,255,.80) !important;
 }
-.navbar .nav-link:hover{
+.navbar :hover{
   color: var(--text) !important;
 }
 .navbar-brand{

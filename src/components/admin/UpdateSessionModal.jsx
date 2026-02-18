@@ -196,7 +196,7 @@ export default function UpdateSessionModal({ show, handleClose, onUpdated, sessi
       contentClassName="border-0 shadow"
     >
       <Modal.Header closeButton className="border-0 pb-0 text-white">
-        <Modal.Title className="fw-semibold">✏️ Modifica Sessione</Modal.Title>
+        <Modal.Title className="fw-semibold"> Modifica Sessione</Modal.Title>
       </Modal.Header>
 
       <Modal.Body className="pt-2 text-white">

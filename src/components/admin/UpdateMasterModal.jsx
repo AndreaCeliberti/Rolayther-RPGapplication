@@ -12,6 +12,8 @@ const empty = {
   avatarImgUrl: "",
   email: "",
   bioMaster: "",
+  password: "",
+  confirmPassword: "",
 };
 
 function dateOnlyToInput(value) {
@@ -27,7 +29,7 @@ export default function UpdateMasterModal({
   show,
   handleClose,
   onUpdated,
-  master, // selezionato dalla tabella
+  master,
 }) {
   const { showToast } = useContext(ToastContext);
   const { user } = useContext(AuthContext);
@@ -37,7 +39,6 @@ export default function UpdateMasterModal({
   const [validated, setValidated] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // opzionale: fetch dettagli master all’apertura
   const [loadingFull, setLoadingFull] = useState(false);
 
   const closeAndReset = () => {
@@ -52,8 +53,8 @@ export default function UpdateMasterModal({
     if (!show) return;
     if (!master) return;
 
-    // prefill dai dati tabella
-    setForm({
+    setForm((prev) => ({
+      ...prev,
       name: master.name ?? "",
       surname: master.surname ?? "",
       nickName: master.nickName ?? "",
@@ -61,15 +62,17 @@ export default function UpdateMasterModal({
       avatarImgUrl: master.avatarImgUrl ?? "",
       email: master.email ?? "",
       bioMaster: master.bioMaster ?? "",
-    });
+      password: "",
+      confirmPassword: "",
+    }));
 
-    // fetch completo (se serve)
     const fetchFull = async () => {
       setLoadingFull(true);
       try {
         const res = await MastersApi.getById(master.masterId);
         const m = res.data;
-        setForm({
+        setForm((prev) => ({
+          ...prev,
           name: m.name ?? "",
           surname: m.surname ?? "",
           nickName: m.nickName ?? "",
@@ -77,9 +80,11 @@ export default function UpdateMasterModal({
           avatarImgUrl: m.avatarImgUrl ?? "",
           email: m.email ?? "",
           bioMaster: m.bioMaster ?? "",
-        });
+          password: "",
+          confirmPassword: "",
+        }));
       } catch {
-        // non blocco: rimango con i dati prefill
+        // ignore
       } finally {
         setLoadingFull(false);
       }
@@ -88,18 +93,39 @@ export default function UpdateMasterModal({
     fetchFull();
   }, [show, master]);
 
+  const passwordTouched = useMemo(
+    () => Boolean(form.password?.trim() || form.confirmPassword?.trim()),
+    [form.password, form.confirmPassword]
+  );
+
+  const passwordTooShort = useMemo(() => {
+    const p = form.password?.trim();
+    if (!p) return false; // se vuota ok
+    return p.length < 8; 
+  }, [form.password]);
+
+  const passwordMismatch = useMemo(() => {
+    if (!passwordTouched) return false;
+    return (form.password ?? "") !== (form.confirmPassword ?? "");
+  }, [passwordTouched, form.password, form.confirmPassword]);
+
   const canSubmit = useMemo(() => {
     if (!isAdmin) return false;
     if (!master?.masterId) return false;
 
-    return (
+    const baseOk =
       form.name.trim() &&
       form.surname.trim() &&
       form.nickName.trim() &&
       form.dateOfBirth &&
-      form.email.trim()
-    );
-  }, [form, isAdmin, master]);
+      form.email.trim();
+
+    if (!baseOk) return false;
+    if (passwordTooShort) return false;
+    if (passwordMismatch) return false;
+
+    return true;
+  }, [form, isAdmin, master, passwordTooShort, passwordMismatch]);
 
   const onChange = (e) => {
     const { name, value } = e.target;
@@ -117,13 +143,20 @@ export default function UpdateMasterModal({
     }
 
     if (!canSubmit) {
+      if (passwordTooShort) {
+        showToast("La password deve avere almeno 8 caratteri", "danger");
+        return;
+      }
+      if (passwordMismatch) {
+        showToast("Password e conferma password non coincidono", "danger");
+        return;
+      }
       showToast("Compila tutti i campi obbligatori", "danger");
       return;
     }
 
     setSaving(true);
     try {
-      // DTO usa DateOnly -> string "YYYY-MM-DD"
       const payload = {
         name: form.name.trim(),
         surname: form.surname.trim(),
@@ -132,11 +165,14 @@ export default function UpdateMasterModal({
         avatarImgUrl: form.avatarImgUrl?.trim() ? form.avatarImgUrl.trim() : null,
         email: form.email.trim(),
         bioMaster: form.bioMaster?.trim() ? form.bioMaster.trim() : null,
+        ...(form.password?.trim()
+          ? { password: form.password.trim() }
+          : {}),
       };
 
       await MastersApi.update(master.masterId, payload);
 
-      showToast("Master aggiornato ✅", "success");
+      showToast("Master aggiornato ", "success");
       closeAndReset();
       onUpdated?.();
     } catch (err) {
@@ -156,9 +192,7 @@ export default function UpdateMasterModal({
         <Modal.Header closeButton>
           <Modal.Title>Accesso negato</Modal.Title>
         </Modal.Header>
-        <Modal.Body className="">
-          Solo gli Admin possono modificare i master.
-        </Modal.Body>
+        <Modal.Body className="">Solo gli Admin possono modificare i master.</Modal.Body>
       </Modal>
     );
   }
@@ -174,7 +208,7 @@ export default function UpdateMasterModal({
       contentClassName="border-0 shadow"
     >
       <Modal.Header closeButton className="border-0 pb-0 text-white">
-        <Modal.Title className="fw-semibold">✏️ Modifica Master</Modal.Title>
+        <Modal.Title className="fw-semibold"> Modifica Master</Modal.Title>
       </Modal.Header>
 
       <Modal.Body className="pt-2 text-white">
@@ -249,7 +283,7 @@ export default function UpdateMasterModal({
                   />
                 </Form.Group>
               </Col>
-
+              
               <Col xs={12}>
                 <Form.Group>
                   <Form.Label>Avatar URL</Form.Label>
@@ -274,7 +308,7 @@ export default function UpdateMasterModal({
                     placeholder="Descrizione breve..."
                   />
                 </Form.Group>
-              </Col>
+              </Col>            
             </Row>
 
             <div className="d-flex flex-column flex-sm-row gap-2 justify-content-end mt-4">

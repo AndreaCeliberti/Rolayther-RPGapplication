@@ -21,7 +21,7 @@ export default function ConfirmDeleteModal({
       contentClassName="border-1 shadow"
     >
       <Modal.Header closeButton={!loading} className="border-1 pb-0">
-        <Modal.Title className="fw-semibold">{title}</Modal.Title>
+        <Modal.Title className="fw-semibold text-white">{title}</Modal.Title>
       </Modal.Header>
 
       <Modal.Body className="pt-2">

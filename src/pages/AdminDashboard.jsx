@@ -33,12 +33,13 @@ import UpdateSessionModal from "../components/admin/UpdateSessionModal";
 import UpdatePlayerModal from "../components/admin/UpdatePlayerModal";
 import UpdateMasterModal from "../components/admin/UpdateMasterModal";
 import ConfirmDeleteModal from "../components/common/ConfirmDeleteModal";
+import CreateSessionModal from "../components/admin/CreateSessionModal";
 
 
 export default function AdminDashboard() {
   const { user } = useContext(AuthContext);
   const { showToast } = useContext(ToastContext);
-
+  
   const isAdmin = user?.role === "Admin";
 
   const [activeKey, setActiveKey] = useState("sessions");
@@ -161,6 +162,7 @@ export default function AdminDashboard() {
     } finally {
       setLoadingKey("platforms", false);
     }
+    
   };
 
   // primo load
@@ -324,7 +326,7 @@ const deleteBody = useMemo(() => {
                     </Button>
                     <Button
                       size="sm"
-                      onClick={() => setShowCreateSession(true)}
+                       onClick={() => setShowCreateSession(true)}
                     >
                       + Crea Sessione
                     </Button>
@@ -397,12 +399,7 @@ const deleteBody = useMemo(() => {
                   </div>
                 )}
 
-                {/* CreateSessionModal */}
-                {showCreateSession && (
-                  <div className="text-muted small mt-3">
-                    <Button onClick={() => setShowCreateSession(true)}>Crea</Button> 
-                  </div>
-                )}
+              
               </Tab>
 
               {/* PLAYERS */}
@@ -566,12 +563,6 @@ const deleteBody = useMemo(() => {
                         ))}
                       </tbody>
                     </Table>
-                  </div>
-                )}
-
-                {showCreateMaster && (
-                  <div className="text-muted small mt-3">
-                    <Button onClick={() => setShowCreateMaster(true)}>+ Crea</Button>
                   </div>
                 )}
               </Tab>
@@ -774,7 +765,12 @@ const deleteBody = useMemo(() => {
           show={showCreateMaster}
           handleClose={() => setShowCreateMaster(false)}
           onCreated={loadMasters}
-        />        
+        />      
+        <CreateSessionModal
+          show={showCreateSession}
+          handleClose={() => setShowCreateSession(false)}
+          onCreated={loadSessions}
+          />  
         <UpdateSessionModal
             show={showUpdateSession}
             handleClose={() => {

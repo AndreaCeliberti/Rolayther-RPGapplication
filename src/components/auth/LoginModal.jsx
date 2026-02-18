@@ -14,7 +14,7 @@ export default function LoginModal({ show, handleClose, openRegisterPlayer, open
     e.preventDefault();
     try {
       await login(email, password);
-      showToast("Login effettuato con successo 🎉", "success");
+      showToast("Login effettuato con successo ", "success");
       handleClose();
     } catch {
       showToast("Credenziali non valide", "danger");

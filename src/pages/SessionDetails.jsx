@@ -1,4 +1,4 @@
-import { useContext, useEffect, useMemo, useState } from "react";
+import { useContext, useEffect, useMemo, useState, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import {
   Container,
@@ -72,6 +72,9 @@ export default function SessionDetails() {
 
   const players = session?.players || session?.Players || [];
   const maxPlayers = session?.numbOfPlayer ?? session?.NumbOfPlayer ?? 0;
+  const currentState = session?.currentState ?? session?.CurrentState; // numero enum
+  const isPublished = currentState === 1; // SessionState.Published = 1
+
 
   const joined = useMemo(() => {
     if (!mePlayerId) return false;
@@ -84,26 +87,34 @@ export default function SessionDetails() {
 
   const sessionLink = session?.sessionLink || session?.SessionLink;  
 
-  const canJoin = isPlayer && !!mePlayerId && !joined && !isFull;
+  const canJoin = isPlayer && !!mePlayerId && isPublished && !joined && !isFull;
   const canLeave = isPlayer && !!mePlayerId && joined;
 
-  const handleJoin = async () => {
-    if (!canJoin) return;
-    setJoining(true);
-    try {
-      await SessionsApi.join(id, mePlayerId);
-      showToast("Sei entrato nella sessione", "success");
-      await loadSession();
-    } catch (err) {
-      const msg =
-        err?.response?.data?.message ||
-        err?.response?.data?.Message ||
-        "Impossibile entrare nella sessione";
-      showToast(msg, "danger");
-    } finally {
-      setJoining(false);
-    }
-  };
+const joinLock = useRef(false);
+
+const handleJoin = async () => {
+  if (!canJoin) return;
+  if (joinLock.current) return;     // blocco duro
+  joinLock.current = true;
+
+  setJoining(true);
+  try {
+    await SessionsApi.join(id, mePlayerId);
+    showToast("Sei entrato nella sessione", "success");
+    await loadSession();
+  } catch (err) {
+    const msg =
+      err?.response?.data?.message ||
+      err?.response?.data?.Message ||
+      "Impossibile entrare nella sessione";
+
+    showToast(msg, "danger");
+    await loadSession();
+  } finally {
+    setJoining(false);
+    joinLock.current = false;       //  sblocco
+  }
+};
 
   const handleLeave = async () => {
     if (!canLeave) return;

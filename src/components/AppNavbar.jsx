@@ -62,7 +62,7 @@ export default function AppNavbar({
         <Navbar.Toggle aria-controls="main-navbar" />
         <Navbar.Collapse id="main-navbar">
           {/* LEFT */}
-          <Nav className="me-auto">
+          <Nav className="me-auto nav-folders">
             <Nav.Link as={NavLink} to="/sessions" end>
               Sessioni
             </Nav.Link>

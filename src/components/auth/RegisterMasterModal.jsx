@@ -278,7 +278,7 @@ export default function RegisterMasterModal({ show, handleClose, openLogin }) {
           </Button>
 
           <div className="text-center mt-3">
-            <small className="text-muted">
+            <small className="text-white">
               Hai già un account?{" "}
               <span
                 className="text-primary"

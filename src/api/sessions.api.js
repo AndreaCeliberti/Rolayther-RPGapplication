@@ -19,6 +19,8 @@ export const SessionsApi = {
   join: (sessionId, playerId) =>
     api.post(`/Session/${sessionId}/Join/${playerId}`),
 
+  
+
   leave: (sessionId, playerId) =>
     api.post(`/Session/${sessionId}/Leave/${playerId}`),
 };
