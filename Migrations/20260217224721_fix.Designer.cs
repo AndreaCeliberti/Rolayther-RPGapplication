@@ -12,8 +12,8 @@ using Rolayther.Data;
 namespace Rolayther.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260213165500_sessionlink")]
-    partial class sessionlink
+    [Migration("20260217224721_fix")]
+    partial class fix
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -562,6 +562,12 @@ namespace Rolayther.Migrations
                     b.Property<int>("NumbOfPlayer")
                         .HasColumnType("int");
 
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
                     b.Property<DateTime>("ScheduledAt")
                         .HasColumnType("datetime2");
 
@@ -590,15 +596,15 @@ namespace Rolayther.Migrations
 
             modelBuilder.Entity("SessionPlayer", b =>
                 {
-                    b.Property<Guid>("PlayerId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<Guid>("SessionId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.HasKey("PlayerId", "SessionId");
+                    b.Property<Guid>("PlayerId")
+                        .HasColumnType("uniqueidentifier");
 
-                    b.HasIndex("SessionId");
+                    b.HasKey("SessionId", "PlayerId");
+
+                    b.HasIndex("PlayerId");
 
                     b.ToTable("SessionPlayer");
                 });

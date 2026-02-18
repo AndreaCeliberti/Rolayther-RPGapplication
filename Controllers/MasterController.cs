@@ -65,7 +65,7 @@ namespace Rolayther.Controllers
         // Get current masters's profile
 
         
-        [Authorize(Roles = "Admin, Master")]
+        [AllowAnonymous]
         [HttpGet("Me")]
         public async Task<IActionResult> Me()
         {
@@ -136,12 +136,12 @@ namespace Rolayther.Controllers
 
         [Authorize(Roles = "Admin, Master")]
         [HttpPut("UpdateMaster/{masterId}")]
-        public async Task<IActionResult> UpdateMaster(Guid masterId, MasterRequestDto masterRequestDto)
+        public async Task<IActionResult> UpdateMaster(Guid masterId, MasterUpdateDto masterUpdatetDto)
         {
             if (!ModelState.IsValid)
                 return BadRequest("Invalid master data.");
 
-            var isUpdated = await _masterService.UpdateMaster(masterId, masterRequestDto);
+            var isUpdated = await _masterService.UpdateMaster(masterId, masterUpdatetDto);
 
             if (isUpdated)
                 return Ok(new { Message = "Master updated successfully." });

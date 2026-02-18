@@ -2,12 +2,14 @@
 using Rolayther.Models.Enums;
 using Rolayther.Services;
 using System.ComponentModel.DataAnnotations;
+using System.Data;
 
 public class Session : BaseEntity
 {
     [Key]
     public Guid SessionId { get; set; }
-    
+
+   
 
     [Required]
     [MaxLength(100)]
@@ -21,7 +23,7 @@ public class Session : BaseEntity
 
     [Required]
     [MaxLength(100)]
-    public string Duration { get; set; }
+    public string Duration { get; set; } = string.Empty;
 
     [Required]
     public int NumbOfPlayer { get; set; }
@@ -43,16 +45,16 @@ public class Session : BaseEntity
 
     public SessionState CurrentState { get; set; } = SessionState.Draft;
 
-    public void ChangeState(SessionState newState)
-    {
-        CurrentState = newState;
-    }
     public ICollection<SessionStateHistory> StateHistory { get; set; } = new List<SessionStateHistory>();
 
 
     // Change status method
     public void ChangeState(SessionState newState, string userId, string role, string? reason = null)
     {
+        //  idempotenza
+        if (CurrentState == newState)
+            return;
+
         if (!SessionStateService.CanTransition(CurrentState, newState))
             throw new InvalidOperationException($"Invalid transition from {CurrentState} to {newState}");
 
@@ -73,39 +75,38 @@ public class Session : BaseEntity
     }
 
     // Add player to session
-
-    public void AddPlayer(Player player)
+    public void AddPlayer(Player player, string userId, string role)
     {
         if (CurrentState != SessionState.Published)
             throw new InvalidOperationException("Cannot join a session that is not published.");
+
+        if (Players.Any(p => p.PlayerId == player.PlayerId))
+            throw new InvalidOperationException("Player already joined.");
 
         if (Players.Count >= NumbOfPlayer)
             throw new InvalidOperationException("Session is already full.");
 
         Players.Add(player);
 
-        // Transition to Full if max players reached
-
+        //  se raggiunge il max -> Full
         if (Players.Count == NumbOfPlayer)
         {
-            ChangeState(SessionState.Full, "SYSTEM", "System", "Session reached max number of players");
+            ChangeState(SessionState.Full, userId, role, "Session reached max number of players");
         }
     }
 
-    // Remove player from session
-
-    public void RemovePlayer(Player player)
+    // Remove player from session ( fix: usa PlayerId, non reference equality)
+    public void RemovePlayer(Player player, string userId, string role)
     {
-        if (!Players.Contains(player))
+        var existing = Players.FirstOrDefault(p => p.PlayerId == player.PlayerId);
+        if (existing == null)
             throw new InvalidOperationException("Player not in session.");
 
-        Players.Remove(player);
-
-        // if session was full and now has slots available, change state back to Published
+        Players.Remove(existing);
 
         if (CurrentState == SessionState.Full && Players.Count < NumbOfPlayer)
         {
-            ChangeState(SessionState.Published, "SYSTEM", "System", "Player left session, slots available");
+            ChangeState(SessionState.Published, userId, role, "Player left session, slots available");
         }
     }
 }

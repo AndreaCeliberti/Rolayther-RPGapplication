@@ -12,8 +12,8 @@ using Rolayther.Data;
 namespace Rolayther.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260213110307_rowversion")]
-    partial class rowversion
+    [Migration("20260218001638_removerow")]
+    partial class removerow
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -562,18 +562,15 @@ namespace Rolayther.Migrations
                     b.Property<int>("NumbOfPlayer")
                         .HasColumnType("int");
 
-                    b.Property<byte[]>("RowVersion")
-                        .IsConcurrencyToken()
-                        .IsRequired()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("rowversion");
-
                     b.Property<DateTime>("ScheduledAt")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("SessionDescription")
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("SessionLink")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("SessionTitle")
                         .IsRequired()
@@ -593,15 +590,15 @@ namespace Rolayther.Migrations
 
             modelBuilder.Entity("SessionPlayer", b =>
                 {
-                    b.Property<Guid>("PlayerId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<Guid>("SessionId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.HasKey("PlayerId", "SessionId");
+                    b.Property<Guid>("PlayerId")
+                        .HasColumnType("uniqueidentifier");
 
-                    b.HasIndex("SessionId");
+                    b.HasKey("SessionId", "PlayerId");
+
+                    b.HasIndex("PlayerId");
 
                     b.ToTable("SessionPlayer");
                 });

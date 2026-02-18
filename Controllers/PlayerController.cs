@@ -115,12 +115,12 @@ namespace Rolayther.Controllers
 
         [Authorize(Roles = "Admin, Player")]
         [HttpPut("UpdatePlayer/{playerId}")]
-        public async Task<IActionResult> UpdatePlayer(Guid playerId, PlayerRequestDto playerRequestDto)
+        public async Task<IActionResult> UpdatePlayer(Guid playerId, [FromBody] PlayerUpdateDto dto)
         {
             if (!ModelState.IsValid)
                 return BadRequest("Invalid player data.");
 
-            var isUpdated = await _playerService.UpdatePlayer(playerId, playerRequestDto);
+            var isUpdated = await _playerService.UpdatePlayer(playerId, dto);
 
             if (isUpdated)
                 return Ok(new { Message = "Player updated successfully." });

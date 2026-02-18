@@ -98,7 +98,7 @@ namespace Rolayther.Services
 
 
         // Update player
-        public async Task<bool> UpdatePlayer(Guid playerId, PlayerRequestDto playerRequestDto)
+        public async Task<bool> UpdatePlayer(Guid playerId, PlayerUpdateDto playerUpdateDto)
         {
             var player = await _context.Players
                 .FirstOrDefaultAsync(p => p.PlayerId == playerId);
@@ -106,13 +106,13 @@ namespace Rolayther.Services
             if (player == null)
                 return false;
 
-            player.Name = playerRequestDto.Name;
-            player.Surname = playerRequestDto.Surname;
-            player.NickName = playerRequestDto.NickName;
-            player.DateOfBirth = playerRequestDto.DateOfBirth;
-            player.AvatarImgUrl = playerRequestDto.AvatarImgUrl;
-            player.Email = playerRequestDto.Email;
-            player.BioPlayer = playerRequestDto.BioPlayer;
+            player.Name = playerUpdateDto.Name;
+            player.Surname = playerUpdateDto.Surname;
+            player.NickName = playerUpdateDto.NickName;
+            player.DateOfBirth = playerUpdateDto.DateOfBirth;
+            player.AvatarImgUrl = playerUpdateDto.AvatarImgUrl;
+            player.Email = playerUpdateDto.Email;
+            player.BioPlayer = playerUpdateDto.BioPlayer;
 
             _context.Players.Update(player);
 

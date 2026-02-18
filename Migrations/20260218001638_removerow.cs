@@ -5,7 +5,7 @@
 namespace Rolayther.Migrations
 {
     /// <inheritdoc />
-    public partial class removerowvers : Migration
+    public partial class removerow : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)

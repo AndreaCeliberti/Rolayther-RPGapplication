@@ -33,7 +33,7 @@ namespace Rolayther.Models.Entities
         public string? BioPlayer { get; set; }
         public DateTime CreatedAt { get; set; } 
 
-        public ICollection<Session> Sessions { get; set; }
+        public ICollection<Session> Sessions { get; set; } = new List<Session>(); 
 
     }
 }

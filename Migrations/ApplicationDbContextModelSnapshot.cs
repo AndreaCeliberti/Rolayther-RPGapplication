@@ -587,15 +587,15 @@ namespace Rolayther.Migrations
 
             modelBuilder.Entity("SessionPlayer", b =>
                 {
-                    b.Property<Guid>("PlayerId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<Guid>("SessionId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.HasKey("PlayerId", "SessionId");
+                    b.Property<Guid>("PlayerId")
+                        .HasColumnType("uniqueidentifier");
 
-                    b.HasIndex("SessionId");
+                    b.HasKey("SessionId", "PlayerId");
+
+                    b.HasIndex("PlayerId");
 
                     b.ToTable("SessionPlayer");
                 });

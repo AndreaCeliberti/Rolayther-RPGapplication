@@ -1,9 +1,11 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
 using Rolayther.Data;
 using Rolayther.Models.DTOs.Request;
 using Rolayther.Models.DTOs.Response;
 using Rolayther.Models.Entities;
 using Rolayther.Models.Enums;
+using System.Data;
 using System.Security.Claims;
 
 namespace Rolayther.Services
@@ -117,80 +119,201 @@ namespace Rolayther.Services
 
         public async Task ChangeSessionState(Guid sessionId, SessionState newState, string userId, string role, string? reason)
         {
-            var session = await _context.Sessions
-                .FirstOrDefaultAsync(s => s.SessionId == sessionId);
+            // 1) Leggi lo stato attuale (e verifica esistenza) in una sola query
+            var currentState = await _context.Sessions
+                .Where(s => s.SessionId == sessionId)
+                .Select(s => (SessionState?)s.CurrentState)
+                .SingleOrDefaultAsync();
 
-            if (session is null)
+            if (currentState is null)
                 throw new KeyNotFoundException("Session not found");
 
-            // (se hai regole di autorizzazione, lasciale qui)
-            // es: if(role != "Master") throw ...
+            // idempotenza
+            if (currentState.Value == newState)
+                return;
 
-            session.ChangeState(newState);
+            if (!SessionStateService.CanTransition(currentState.Value, newState))
+                throw new InvalidOperationException($"Invalid transition from {currentState.Value} to {newState}");
 
-            // (se registri uno storico, lascialo qui)
-            // _context.SessionStateChanges.Add(new SessionStateChange { ... });
+            // 2) Update atomico: cambia stato SOLO se è ancora quello che hai letto
+            var rows = await _context.Sessions
+                .Where(s => s.SessionId == sessionId && s.CurrentState == currentState.Value)
+                .ExecuteUpdateAsync(u => u.SetProperty(s => s.CurrentState, newState));
+
+            if (rows == 0)
+                throw new InvalidOperationException("Conflitto: stato già cambiato da un'altra richiesta. Riprova.");
+
+            // 3) Inserisci history
+            _context.SessionStateHistories.Add(new SessionStateHistory
+            {
+                Id = Guid.NewGuid(),
+                SessionId = sessionId,
+                FromState = currentState.Value,
+                ToState = newState,
+                ChangedByUserId = userId,
+                ChangedByRole = role,
+                Reason = reason,
+                ChangedAtUtc = DateTime.UtcNow
+            });
 
             await _context.SaveChangesAsync();
         }
 
 
 
+
         // Add player to session
-        public async Task<bool> AddPlayerToSession(Guid sessionId, Guid playerId)
+        public async Task<bool> AddPlayerToSession(Guid sessionId, Guid playerId, string userId, string role)
         {
-            var session = await _context.Sessions
-                .Include(s => s.Players)
-                .Include(s => s.StateHistory)
-                .FirstOrDefaultAsync(s => s.SessionId == sessionId);
+            await using var tx = await _context.Database.BeginTransactionAsync();
 
-            if (session == null)
-                return false;
+            // 1) Lock della riga Session per evitare race condition sull’ultimo posto
+            var sessionData = await _context.Sessions
+                .FromSqlInterpolated($@"
+            SELECT * FROM Sessions WITH (UPDLOCK, ROWLOCK)
+            WHERE SessionId = {sessionId}
+        ")
+                .Select(s => new { s.SessionId, s.NumbOfPlayer, s.CurrentState })
+                .SingleOrDefaultAsync();
 
-            var player = await _context.Players.FindAsync(playerId);
-            if (player == null)
-                return false;
+            if (sessionData is null) return false;
 
+            // Stato valido
+            if (sessionData.CurrentState != SessionState.Published)
+                throw new InvalidOperationException("Cannot join a session that is not published.");
+
+            // 2) Player esiste
+            var playerExists = await _context.Players.AnyAsync(p => p.PlayerId == playerId);
+            if (!playerExists) return false;
+
+            // 3) Già iscritto?
+            var alreadyIn = await _context.Database.ExecuteSqlInterpolatedAsync($@"
+        SELECT 1
+        FROM SessionPlayer
+        WHERE SessionId = {sessionId} AND PlayerId = {playerId}
+    ");
+
+            // Nota: ExecuteSql* ritorna -1 su SELECT, quindi facciamo Any via query vera:
+            var alreadyJoined = await _context.Set<Dictionary<string, object>>("SessionPlayer")
+                .AnyAsync(x => EF.Property<Guid>(x, "SessionId") == sessionId &&
+                               EF.Property<Guid>(x, "PlayerId") == playerId);
+
+            if (alreadyJoined)
+                throw new InvalidOperationException("Player already joined.");
+
+            // 4) Quanti player ci sono ORA? (con lock già preso sulla sessione)
+            var count = await _context.Set<Dictionary<string, object>>("SessionPlayer")
+                .CountAsync(x => EF.Property<Guid>(x, "SessionId") == sessionId);
+
+            if (count >= sessionData.NumbOfPlayer)
+                throw new InvalidOperationException("Session is already full.");
+
+            // 5) Inserisci nella join table (atomicamente dentro tx)
             try
             {
-                session.AddPlayer(player);
+                await _context.Database.ExecuteSqlInterpolatedAsync($@"
+            INSERT INTO SessionPlayer (SessionId, PlayerId)
+            VALUES ({sessionId}, {playerId});
+        ");
             }
-            catch (Exception ex)
+            catch (DbUpdateException)
             {
-                Console.WriteLine($"[AddPlayerToSession] {ex.GetType().Name}: {ex.Message}");
-                return false;
+                // Dup key -> qualcun altro ha inserito prima
+                throw new InvalidOperationException("Join conflict. Retry.");
             }
 
-            return await SaveAsync();
+            // 6) Se ora è piena -> set Full + history
+            var newCount = count + 1;
+            if (newCount == sessionData.NumbOfPlayer)
+            {
+                await _context.Sessions
+                    .Where(s => s.SessionId == sessionId && s.CurrentState == SessionState.Published)
+                    .ExecuteUpdateAsync(u => u.SetProperty(s => s.CurrentState, SessionState.Full));
+
+                _context.SessionStateHistories.Add(new SessionStateHistory
+                {
+                    Id = Guid.NewGuid(),
+                    SessionId = sessionId,
+                    FromState = SessionState.Published,
+                    ToState = SessionState.Full,
+                    ChangedByUserId = userId,
+                    ChangedByRole = role,
+                    Reason = "Session reached max number of players",
+                    ChangedAtUtc = DateTime.UtcNow
+                });
+
+                await _context.SaveChangesAsync();
+            }
+
+            await tx.CommitAsync();
+            return true;
         }
+
+
+
 
         // Remove player from session
-        public async Task<bool> RemovePlayerFromSession(Guid sessionId, Guid playerId)
+        public async Task<bool> RemovePlayerFromSession(Guid sessionId, Guid playerId, string userId, string role)
         {
-            var session = await _context.Sessions
-                .Include(s => s.Players)
-                .Include(s => s.StateHistory)
-                .FirstOrDefaultAsync(s => s.SessionId == sessionId);
+            await using var tx = await _context.Database.BeginTransactionAsync();
 
-            if (session == null)
-                return false;
+            // 1) Lock della sessione (evita race tra leave/join e cambio stato)
+            var sessionData = await _context.Sessions
+                .FromSqlInterpolated($@"
+            SELECT * FROM Sessions WITH (UPDLOCK, ROWLOCK)
+            WHERE SessionId = {sessionId}
+        ")
+                .Select(s => new { s.SessionId, s.NumbOfPlayer, s.CurrentState })
+                .SingleOrDefaultAsync();
 
-            var player = session.Players.FirstOrDefault(p => p.PlayerId == playerId);
-            if (player == null)
-                return false;
+            if (sessionData is null) return false;
 
-            try
+            // 2) Se non è iscritto, niente da fare
+            var isJoined = await _context.Set<Dictionary<string, object>>("SessionPlayer")
+                .AnyAsync(x => EF.Property<Guid>(x, "SessionId") == sessionId &&
+                               EF.Property<Guid>(x, "PlayerId") == playerId);
+
+            if (!isJoined) return false;
+
+            // 3) Rimuovi dalla join table
+            var deleted = await _context.Database.ExecuteSqlInterpolatedAsync($@"
+        DELETE FROM SessionPlayer
+        WHERE SessionId = {sessionId} AND PlayerId = {playerId};
+    ");
+
+            if (deleted == 0) return false; // qualcuno l'ha già rimosso in mezzo
+
+            // 4) Se era FULL, ora torna PUBLISHED (per la tua regola)
+            if (sessionData.CurrentState == SessionState.Full)
             {
-                session.RemovePlayer(player);
-            }
-            catch
-            {
-                return false;
+                // torna Published solo se è ancora Full (coerenza)
+                var rows = await _context.Sessions
+                    .Where(s => s.SessionId == sessionId && s.CurrentState == SessionState.Full)
+                    .ExecuteUpdateAsync(u => u.SetProperty(s => s.CurrentState, SessionState.Published));
+
+                if (rows > 0)
+                {
+                    _context.SessionStateHistories.Add(new SessionStateHistory
+                    {
+                        Id = Guid.NewGuid(),
+                        SessionId = sessionId,
+                        FromState = SessionState.Full,
+                        ToState = SessionState.Published,
+                        ChangedByUserId = userId,
+                        ChangedByRole = role,
+                        Reason = "Player left session, slots available",
+                        ChangedAtUtc = DateTime.UtcNow
+                    });
+
+                    await _context.SaveChangesAsync();
+                }
             }
 
-            return await SaveAsync();
+            await tx.CommitAsync();
+            return true;
         }
-  //Soft delete
+
+        //Soft delete
 
         public Task<bool> DeleteSession(Guid sessionId)
         {

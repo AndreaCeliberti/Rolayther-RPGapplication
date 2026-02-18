@@ -1,7 +1,10 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Rolayther.Models.DTOs.Request;
+using Rolayther.Models.Entities;
 using Rolayther.Services;
+using System.Data;
 using System.Security.Claims;
 
 namespace Rolayther.Controllers
@@ -83,8 +86,6 @@ namespace Rolayther.Controllers
         }
 
 
-
-
         // Change session state
 
         [HttpPatch("{sessionId}/ChangeState")]
@@ -104,39 +105,83 @@ namespace Rolayther.Controllers
 
 
 
-
-
-
         // Join session
 
         [Authorize]
-        [HttpPost("{sessionId}/Join/{playerId}")]
-        public async Task<IActionResult> JoinSession(Guid sessionId, Guid playerId)
+        [HttpPost("{sessionId}/join/{playerId}")]
+        public async Task<IActionResult> Join(Guid sessionId, Guid playerId)
         {
-            var result = await _sessionService.AddPlayerToSession(sessionId, playerId);
+            try
+            {
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var role = User.FindFirst(ClaimTypes.Role)?.Value;
 
-            if (!result)
-                return BadRequest("Unable to join session");
+                if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(role))
+                    return Unauthorized();
 
-            return Ok(new { Message = "Player added to session" });
+                var ok = await _sessionService.AddPlayerToSession(sessionId, playerId, userId, role);
+                if (!ok) return NotFound(new { message = "Session o player non trovati" });
+
+                return Ok(true);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(new { message = ex.Message });
+            }
+           // catch (DbUpdateConcurrencyException)
+            //{
+              //  return Conflict(new { message = "Qualcuno ha appena occupato l’ultimo posto. Aggiorna e riprova." });
+            //}
+            catch (DbUpdateException ex)
+            {
+                var inner = ex.InnerException?.Message ?? ex.Message;
+                return Conflict(new { message = inner });
+            }
         }
+
+
 
         // Leave session
 
-        [Authorize]
-        [HttpPost("{sessionId}/Leave/{playerId}")]
-        public async Task<IActionResult> LeaveSession(Guid sessionId, Guid playerId)
+       
+
+    [Authorize]
+    [HttpPost("{sessionId}/Leave/{playerId}")]
+    public async Task<IActionResult> LeaveSession(Guid sessionId, Guid playerId)
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var role = User.FindFirst(ClaimTypes.Role)?.Value;
+
+        if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(role))
+            return Unauthorized();
+
+        try
         {
-            var result = await _sessionService.RemovePlayerFromSession(sessionId, playerId);
+            var result = await _sessionService.RemovePlayerFromSession(sessionId, playerId, userId, role);
 
             if (!result)
                 return BadRequest("Unable to leave session");
 
             return Ok(new { Message = "Player removed from session" });
         }
-// Delete a session
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Conflict(new { message = "Conflitto durante l’uscita dalla sessione. Riprova." });
+        }
+        catch (DbUpdateException)
+        {
+            return Conflict(new { message = "Conflitto durante l’uscita dalla sessione. Riprova." });
+        }
+    }
 
-        [Authorize(Roles = "Admin, Master")]
+
+    // Delete a session
+
+    [Authorize(Roles = "Admin, Master")]
         [HttpDelete("DeleteSession/{sessionId}")]
         public async Task<IActionResult> DeleteSession(Guid sessionId)
         {
