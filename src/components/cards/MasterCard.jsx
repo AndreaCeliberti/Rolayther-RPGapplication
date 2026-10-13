@@ -27,9 +27,11 @@ export default function MasterCard({ master }) {
 
           <div style={{ color: "var(--muted)" }} className="flex-grow-1">
             <div className="fw-semibold">
-              {master.nickName || `${master.name} ${master.surname}`}
+              {master.nickName || "Master"}
             </div>
-            <div style={{ color: "var(--muted)" }} className=" small">{master.email}</div>
+            {master.email && (
+              <div style={{ color: "var(--muted)" }} className=" small">{master.email}</div>
+            )}
           </div>
         </div>
 

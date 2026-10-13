@@ -62,7 +62,7 @@ export default function MasterDetails() {
   return (
     <>
       <PageHeader
-        title={master.nickName || `${master.name} ${master.surname}`}
+        title={master.nickName || "Master"}
         subtitle="Profilo Master"
       />
 
@@ -91,7 +91,7 @@ export default function MasterDetails() {
               </div>
 
               <h5 className="fw-semibold mb-1">
-                {master.nickName || `${master.name} ${master.surname}`}
+                {master.nickName || "Master"}
               </h5>
 
               <div className="text-muted small mb-3">
