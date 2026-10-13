@@ -173,6 +173,16 @@ namespace Rolayther.Services
                 .FirstOrDefaultAsync(m => m.MasterId == masterId);
         }
 
+        // Profilo pubblico: un Master approvato con le sue sessioni (serve alla pagina di dettaglio).
+        // Un Master in attesa o rifiutato non esiste per il pubblico: torna null.
+        public async Task<Master?> GetApprovedMasterWithSessions(Guid masterId)
+        {
+            return await _context.Masters
+                .AsNoTracking()
+                .Include(m => m.Sessions)
+                .FirstOrDefaultAsync(m => m.MasterId == masterId && m.Status == ApprovalStatus.Approved);
+        }
+
         // Get master by email
 
         public async Task<Master?> GetMasterByEmail(string email)

@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Rolayther.Helpers;
 using Rolayther.Models.DTOs.Request;
 using Rolayther.Models.Entities;
 using Rolayther.Services;
@@ -35,7 +36,15 @@ namespace Rolayther.Controllers
             {
                 return NotFound("No sessions found.");
             }
-            return Ok(sessions);
+
+            // Admin: risposta completa (la dashboard usa email e nomi dei player).
+            // Tutti gli altri, anche anonimi: solo dati pubblici (niente email, date di nascita, nomi reali;
+            // il link della sessione solo a chi è iscritto o la gestisce).
+            if (_access.IsAdmin(User))
+                return Ok(sessions);
+
+            var viewer = ViewerContext.From(User);
+            return Ok(sessions.Select(s => s.ToPublic(viewer)).ToList());
         }
 
         // Get session by id
@@ -48,7 +57,11 @@ namespace Rolayther.Controllers
             {
                 return NotFound("Session not found.");
             }
-            return Ok(session);
+
+            if (_access.IsAdmin(User))
+                return Ok(session);
+
+            return Ok(session.ToPublic(ViewerContext.From(User)));
         }
 
 

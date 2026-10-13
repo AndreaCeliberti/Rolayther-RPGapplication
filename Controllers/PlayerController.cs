@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Rolayther.Helpers;
 using Rolayther.Models.DTOs.Request;
 using Rolayther.Services;
 using System.Security.Claims;
@@ -21,9 +22,10 @@ namespace Rolayther.Controllers
         }
 
         // Get all players
+        // Solo Admin: la lista contiene nome, cognome, email e data di nascita di TUTTI i giocatori,
+        // e l'unico che la usa è la dashboard Admin.
 
-        
-        [Authorize(Roles = "Admin,Master")]
+        [Authorize(Roles = "Admin")]
         [HttpGet("GetAllPlayers")]
         public async Task<IActionResult> GetAllPlayers()
         {
@@ -75,7 +77,12 @@ namespace Rolayther.Controllers
             if (player == null)
                 return NotFound(new { Message = "Player not found." });
 
-            return Ok(player);
+            // Admin e il Player stesso: record completo (serve ai form di modifica).
+            // Chiunque altro (altri Player, Master): solo nickname e avatar.
+            if (await _access.CanManagePlayer(User, playerId))
+                return Ok(player);
+
+            return Ok(player.ToPublic());
         }
 
         // Get current player's profile
@@ -106,12 +113,18 @@ namespace Rolayther.Controllers
         [HttpGet("{playerId}/Sessions")]
         public async Task<IActionResult> GetPlayerSessions(Guid playerId)
         {
+            // Lo storico delle sessioni a cui partecipa un giocatore è privato: solo Admin e il Player stesso
+            if (!await _access.CanManagePlayer(User, playerId))
+                return StatusCode(StatusCodes.Status403Forbidden, new { Message = "Puoi vedere solo le tue sessioni." });
+
             var sessions = await _playerService.GetSessionsByPlayerId(playerId);
 
             if (sessions == null)
                 return NotFound(new { Message = "Player not found." });
 
-            return Ok(sessions);
+            // Il Player è iscritto a tutte queste sessioni, quindi vede il link; degli altri partecipanti solo nickname e avatar
+            var viewer = ViewerContext.From(User);
+            return Ok(sessions.Select(s => s.ToPublic(viewer)).ToList());
         }
 
 

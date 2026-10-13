@@ -131,11 +131,13 @@ namespace Rolayther.Services
                     ScheduledAt = s.ScheduledAt,
                     Duration = s.Duration,
                     NumbOfPlayer = s.NumbOfPlayer,
+                    SessionLink = s.SessionLink,
                     CoverImgUrl = s.CoverImgUrl,
                     Master = s.Master,
                     Game = s.Game,
                     Genre = s.Genre,
-                    Players = s.Players
+                    Players = s.Players,
+                    CurrentState = s.CurrentState
                 })
                 .ToListAsync();
         }

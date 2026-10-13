@@ -2,7 +2,9 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using Rolayther.Helpers;
 using Rolayther.Models.DTOs.Request;
+using Rolayther.Models.Enums;
 using Rolayther.Services;
 using System.Security.Claims;
 
@@ -35,7 +37,13 @@ namespace Rolayther.Controllers
             {
                 return NotFound("No masters found.");
             }
-            return Ok(masters);
+
+            // Admin: lista completa (la dashboard mostra email e nomi).
+            // Tutti gli altri, anche anonimi: solo il profilo pubblico (nickname, avatar, bio, sessioni).
+            if (_access.IsAdmin(User))
+                return Ok(masters);
+
+            return Ok(masters.Select(m => m.ToPublic()).ToList());
         }
 
         // Create a new master (solo Admin: la registrazione pubblica passa da /Auth/register-master,
@@ -95,29 +103,48 @@ namespace Rolayther.Controllers
 
         // Get master by id
 
-        [Authorize]
+        // Pubblico come la lista dei Master (la pagina /masters/:id è raggiungibile senza login).
+        // Admin e il Master stesso ricevono il record completo (serve ai form di modifica);
+        // tutti gli altri ricevono il solo profilo pubblico, e solo se il Master è approvato.
+        [AllowAnonymous]
         [HttpGet("GetMaster/{masterId}")]
         public async Task<IActionResult> GetMasterById(Guid masterId)
         {
-            var master = await _masterService.GetMasterById(masterId);
+            if (await _access.CanManageMaster(User, masterId))
+            {
+                var full = await _masterService.GetMasterById(masterId);
+                if (full == null)
+                    return NotFound(new { Message = "Master not found." });
 
-            if (master == null)
+                return Ok(full);
+            }
+
+            var publicMaster = await _masterService.GetApprovedMasterWithSessions(masterId);
+            if (publicMaster == null)
                 return NotFound(new { Message = "Master not found." });
 
-            return Ok(master);
+            return Ok(publicMaster.ToPublic());
         }
 
         [AllowAnonymous]
         [HttpGet("{masterId}/Sessions")]
         public async Task<IActionResult> GetSessionsByMaster(Guid masterId)
         {
-            // (opzionale ma consigliato) verifica che il master esista
+            // verifica che il master esista
             var master = await _masterService.GetMasterById(masterId);
             if (master == null)
                 return NotFound(new { Message = "Master not found." });
 
+            // Admin e il Master stesso gestiscono queste sessioni; per il pubblico un Master non approvato non esiste
+            var canManage = await _access.CanManageMaster(User, masterId);
+            if (!canManage && master.Status != ApprovalStatus.Approved)
+                return NotFound(new { Message = "Master not found." });
+
             var sessions = await _sessionService.GetSessionsByMasterId(masterId);
-            return Ok(sessions);
+
+            // Niente email né dati personali dei player; il link della sessione solo a chi la gestisce o è iscritto
+            var viewer = ViewerContext.From(User, ownsAllSessions: canManage);
+            return Ok(sessions.Select(s => s.ToPublic(viewer)).ToList());
         }
 
         [Authorize(Roles = "Admin, Master")]
@@ -133,7 +160,10 @@ namespace Rolayther.Controllers
                 return NotFound(new { Message = "Master profile not found for this user." });
 
             var sessions = await _sessionService.GetSessionsByMasterId(master.MasterId);
-            return Ok(sessions);
+
+            // Sono le sessioni del chiamante: link visibile, ma niente dati personali dei player
+            var viewer = ViewerContext.From(User, ownsAllSessions: true);
+            return Ok(sessions.Select(s => s.ToPublic(viewer)).ToList());
         }
 
         // Update master

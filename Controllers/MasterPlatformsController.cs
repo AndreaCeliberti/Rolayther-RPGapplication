@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Rolayther.Models.DTOs.Request;
 using Rolayther.Services;
@@ -10,10 +11,12 @@ namespace Rolayther.Controllers
     public class MasterPlatformsController : ControllerBase
     {
         private readonly MasterPlatformsService _service;
+        private readonly ResourceAccessService _access;
 
-        public MasterPlatformsController(MasterPlatformsService service)
+        public MasterPlatformsController(MasterPlatformsService service, ResourceAccessService access)
         {
             _service = service;
+            _access = access;
         }
 
         [Authorize(Roles = "Admin, Master")]
@@ -29,6 +32,11 @@ namespace Rolayther.Controllers
         public async Task<IActionResult> UpdateMasterPlatforms(Guid masterId, [FromBody] UpdateMasterPlatformsDto dto)
         {
             if (dto == null || dto.PlatformIds == null) return BadRequest("Dati mancanti.");
+
+            // Admin sempre; il Master solo sul PROPRIO elenco di piattaforme
+            if (!await _access.CanManageMaster(User, masterId))
+                return StatusCode(StatusCodes.Status403Forbidden, new { Message = "Puoi modificare solo le tue piattaforme." });
+
             var ok = await _service.UpdateMasterPlatforms(masterId, dto.PlatformIds);
             if (!ok) return NotFound("Master non trovato.");
             return Ok(new { Message = "Piattaforme del master aggiornate correttamente." });
