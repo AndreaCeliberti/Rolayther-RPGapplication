@@ -20,6 +20,7 @@ namespace Rolayther.Data
         public DbSet<SessionStateHistory> SessionStateHistories { get; set; }
         public DbSet<MasterGame> MasterGames { get; set; }
         public DbSet<MasterPlatform> MasterPlatforms { get; set; }
+        public DbSet<SessionResourceFile> SessionResourceFiles { get; set; }
         
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -34,6 +35,7 @@ namespace Rolayther.Data
             modelBuilder.Entity<Platform>().HasQueryFilter(p => !p.IsDeleted);
             modelBuilder.Entity<Player>().HasQueryFilter(p => !p.IsDeleted);
             modelBuilder.Entity<Session>().HasQueryFilter(s => !s.IsDeleted);
+            modelBuilder.Entity<SessionResourceFile>().HasQueryFilter(f => !f.IsDeleted);
 
            
 
@@ -111,6 +113,13 @@ namespace Rolayther.Data
                 .HasOne(h => h.Session)
                 .WithMany(s => s.StateHistory)
                 .HasForeignKey(h => h.SessionId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Relazione SessionResourceFile -> Session
+            modelBuilder.Entity<SessionResourceFile>()
+                .HasOne(f => f.Session)
+                .WithMany()
+                .HasForeignKey(f => f.SessionId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             // Configurazione relazione many-to-many Master <-> Game tramite MasterGame

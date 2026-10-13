@@ -4,6 +4,7 @@ using Rolayther.Data;
 using Rolayther.Models.DTOs.Request;
 using Rolayther.Models.DTOs.Response;
 using Rolayther.Models.Entities;
+using Rolayther.Models.Enums;
 using Serilog;
 
 namespace Rolayther.Services
@@ -210,7 +211,8 @@ namespace Rolayther.Services
                 var result = await _userManager.CreateAsync(user, dto.Password);
                 if (!result.Succeeded)
                     return false;
-                await _userManager.AddToRoleAsync(user, "Master");
+                // Il ruolo "Master" NON viene più assegnato qui: la richiesta resta Pending
+                // finché un Admin non la approva (vedi MasterService.ApproveMaster).
                 var master = new Master
                 {
                     MasterId = Guid.NewGuid(),
@@ -221,7 +223,8 @@ namespace Rolayther.Services
                     AvatarImgUrl = dto.AvatarImgUrl,
                     Email = dto.Email,
                     BioMaster = dto.BioMaster,
-                    CreatedAt = DateTime.UtcNow
+                    CreatedAt = DateTime.UtcNow,
+                    Status = ApprovalStatus.Pending
                 };
                 _context.Masters.Add(master);
                 await _context.SaveChangesAsync();

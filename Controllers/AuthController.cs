@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Rolayther.Models.DTOs.Request;
 using Rolayther.Models.DTOs.Response;
 using Rolayther.Services;
@@ -9,6 +10,7 @@ namespace Rolayther.Controllers
    
         [Route("api/[controller]")]
         [ApiController]
+        [EnableRateLimiting("AuthPolicy")]
         public class AuthController : ControllerBase
         {
             private readonly AuthService _authService;

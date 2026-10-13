@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Rolayther.Models.DTOs.Request;
@@ -13,11 +14,13 @@ namespace Rolayther.Controllers
     {
         private readonly MasterService _masterService;
         private readonly SessionService _sessionService;
+        private readonly ResourceAccessService _access;
 
-        public MasterController(MasterService masterService, SessionService sessionService)
+        public MasterController(MasterService masterService, SessionService sessionService, ResourceAccessService access)
         {
             _masterService = masterService;
             _sessionService = sessionService;
+            _access = access;
         }
 
         //Get all master
@@ -35,9 +38,10 @@ namespace Rolayther.Controllers
             return Ok(masters);
         }
 
-        // Create a new master
+        // Create a new master (solo Admin: la registrazione pubblica passa da /Auth/register-master,
+        // questo endpoint crea una riga Master senza account Identity e non deve essere aperto a tutti)
 
-        [AllowAnonymous]
+        [Authorize(Roles = "Admin")]
         [HttpPost("CreateMaster")]
         public async Task<IActionResult> CreateMaster([FromBody]MasterRequestDto masterRequestDto)
         {
@@ -141,6 +145,10 @@ namespace Rolayther.Controllers
             if (!ModelState.IsValid)
                 return BadRequest("Invalid master data.");
 
+            // Admin sempre; il Master solo sul PROPRIO profilo
+            if (!await _access.CanManageMaster(User, masterId))
+                return StatusCode(StatusCodes.Status403Forbidden, new { Message = "Puoi modificare solo il tuo profilo." });
+
             var isUpdated = await _masterService.UpdateMaster(masterId, masterUpdatetDto);
 
             if (isUpdated)
@@ -149,6 +157,60 @@ namespace Rolayther.Controllers
             return NotFound(new { Message = "Master not found or update failed." });
         }
 
+        // Upload avatar (file al posto dell'URL)
+        [Authorize(Roles = "Admin, Master")]
+        [HttpPost("{masterId}/Avatar")]
+        [RequestSizeLimit(5_000_000)]
+        public async Task<IActionResult> UploadAvatar(Guid masterId, IFormFile file)
+        {
+            // Admin sempre; il Master solo sul PROPRIO profilo
+            if (!await _access.CanManageMaster(User, masterId))
+                return StatusCode(StatusCodes.Status403Forbidden, new { Message = "Puoi cambiare solo il tuo avatar." });
+
+            try
+            {
+                var url = await _masterService.UpdateAvatarAsync(masterId, file);
+                if (url == null)
+                    return NotFound(new { Message = "Master non trovato o salvataggio fallito." });
+
+                return Ok(new { AvatarImgUrl = url });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+        }
+
+
+        // ================== ADMIN: RICHIESTE MASTER IN ATTESA ==================
+
+        [Authorize(Roles = "Admin")]
+        [HttpGet("PendingRequests")]
+        public async Task<IActionResult> GetPendingRequests()
+        {
+            var pending = await _masterService.GetPendingMasters();
+            return Ok(pending);
+        }
+
+        [Authorize(Roles = "Admin")]
+        [HttpPut("{masterId}/Approve")]
+        public async Task<IActionResult> ApproveMaster(Guid masterId)
+        {
+            var approved = await _masterService.ApproveMaster(masterId);
+            return approved
+                ? Ok(new { Message = "Richiesta approvata: il ruolo Master è stato assegnato." })
+                : BadRequest(new { Message = "Richiesta non trovata, già gestita, o nessun account collegato." });
+        }
+
+        [Authorize(Roles = "Admin")]
+        [HttpPut("{masterId}/Reject")]
+        public async Task<IActionResult> RejectMaster(Guid masterId, [FromBody] MasterApprovalActionDto? dto)
+        {
+            var rejected = await _masterService.RejectMaster(masterId, dto?.Reason);
+            return rejected
+                ? Ok(new { Message = "Richiesta rifiutata." })
+                : BadRequest(new { Message = "Richiesta non trovata o già gestita." });
+        }
 
         // Delete a master
         [Authorize(Roles = "Admin")]

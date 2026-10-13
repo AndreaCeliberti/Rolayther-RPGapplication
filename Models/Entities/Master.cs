@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Rolayther.Models.Entities.Bridges;
+using Rolayther.Models.Enums;
 using System.ComponentModel.DataAnnotations;
 
 namespace Rolayther.Models.Entities
@@ -8,6 +9,9 @@ namespace Rolayther.Models.Entities
     {
         [Key]
         public Guid MasterId { get; set; }
+        // Stato della richiesta: Pending finché un Admin non approva/rifiuta.
+        // Il ruolo Identity "Master" viene assegnato solo al passaggio ad Approved.
+        public ApprovalStatus Status { get; set; } = ApprovalStatus.Pending;
         [Required]
         [MaxLength(100)]
         public string Name { get; set; } = string.Empty;

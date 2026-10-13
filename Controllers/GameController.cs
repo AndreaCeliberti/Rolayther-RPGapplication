@@ -56,6 +56,26 @@ namespace Rolayther.Controllers
             }
         }
 
+        // Upload cover (file al posto dell'URL)
+        [Authorize(Roles = "Admin")]
+        [HttpPost("{gameId}/Cover")]
+        [RequestSizeLimit(5_000_000)]
+        public async Task<IActionResult> UploadCover(Guid gameId, IFormFile file)
+        {
+            try
+            {
+                var url = await _gameService.UpdateCoverAsync(gameId, file);
+                if (url == null)
+                    return NotFound(new { Message = "Gioco non trovato o salvataggio fallito." });
+
+                return Ok(new { CoverImageUrl = url });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+        }
+
         // Delete a game
 
         [Authorize(Roles = "Admin")]

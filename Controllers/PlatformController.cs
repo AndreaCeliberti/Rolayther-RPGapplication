@@ -52,6 +52,26 @@ namespace Rolayther.Controllers
             }
         }
 
+        // Upload logo (file al posto dell'URL)
+        [Authorize(Roles = "Admin")]
+        [HttpPost("{platformId}/Logo")]
+        [RequestSizeLimit(5_000_000)]
+        public async Task<IActionResult> UploadLogo(Guid platformId, IFormFile file)
+        {
+            try
+            {
+                var url = await _platformService.UpdateLogoAsync(platformId, file);
+                if (url == null)
+                    return NotFound(new { Message = "Piattaforma non trovata o salvataggio fallito." });
+
+                return Ok(new { LogoUrl = url });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+        }
+
         // Delete a platform
 
         [Authorize(Roles = "Admin")]

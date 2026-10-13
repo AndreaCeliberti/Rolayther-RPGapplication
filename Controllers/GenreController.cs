@@ -53,6 +53,26 @@ namespace Rolayther.Controllers
             }
         }
 
+        // Upload image (file al posto dell'URL)
+        [Authorize(Roles = "Admin")]
+        [HttpPost("{genreId}/Image")]
+        [RequestSizeLimit(5_000_000)]
+        public async Task<IActionResult> UploadImage(Guid genreId, IFormFile file)
+        {
+            try
+            {
+                var url = await _genreService.UpdateImageAsync(genreId, file);
+                if (url == null)
+                    return NotFound(new { Message = "Genere non trovato o salvataggio fallito." });
+
+                return Ok(new { ImageUrl = url });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+        }
+
         // Delete a genre
 
         [Authorize(Roles = "Admin")]
