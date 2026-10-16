@@ -68,7 +68,7 @@ namespace Rolayther.Services
         }
 
         // Create Platform
-        public async Task<bool> CreatePlatform(PlatformRequestDto platformRequestDto)
+        public async Task<Guid?> CreatePlatform(PlatformRequestDto platformRequestDto)
         {
             var newPlatform = new Platform
             {
@@ -79,7 +79,9 @@ namespace Rolayther.Services
                 //MasterId = platformRequestDto.MasterId
             };
             _context.Platforms.Add(newPlatform);
-            return await SaveAsync();
+
+            // Restituisce l'id della piattaforma creata (serve al frontend per caricare subito il logo)
+            return await SaveAsync() ? newPlatform.PlatformId : null;
         }
 
         //Soft delete

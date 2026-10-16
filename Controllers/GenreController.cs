@@ -42,10 +42,11 @@ namespace Rolayther.Controllers
             {
                 return BadRequest("Invalid genre data.");
             }
-            var isCreated = await _genreService.CreateGenre(genreRequestDto);
-            if (isCreated)
+            var newGenreId = await _genreService.CreateGenre(genreRequestDto);
+            if (newGenreId != null)
             {
-                return Ok(new { Message = "Genre created Successfully." });
+                // GenreId serve al frontend per caricare subito l'immagine (POST {genreId}/Image)
+                return Ok(new { Message = "Genre created Successfully.", GenreId = newGenreId });
             }
             else
             {

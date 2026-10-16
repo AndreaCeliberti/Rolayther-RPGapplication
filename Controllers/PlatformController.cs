@@ -41,10 +41,11 @@ namespace Rolayther.Controllers
             {
                 return BadRequest("Invalid platform data.");
             }
-            var isCreated = await _platformService.CreatePlatform(platformRequestDto);
-            if (isCreated)
+            var newPlatformId = await _platformService.CreatePlatform(platformRequestDto);
+            if (newPlatformId != null)
             {
-                return Ok(new { Message = "Platform created Successfully." });
+                // PlatformId serve al frontend per caricare subito il logo (POST {platformId}/Logo)
+                return Ok(new { Message = "Platform created Successfully.", PlatformId = newPlatformId });
             }
             else
             {

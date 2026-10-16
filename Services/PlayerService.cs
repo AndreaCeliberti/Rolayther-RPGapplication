@@ -75,7 +75,7 @@ namespace Rolayther.Services
         }
 
         // Create Player
-        public async Task<bool> CreatePlayer(PlayerRequestDto playerRequestDto)
+        public async Task<Guid?> CreatePlayer(PlayerRequestDto playerRequestDto)
         {
             var newPlayer = new Player
             {
@@ -90,7 +90,7 @@ namespace Rolayther.Services
                 CreatedAt = DateTime.UtcNow
             };
             _context.Players.Add(newPlayer);
-            return await SaveAsync();
+            return await SaveAsync() ? newPlayer.PlayerId : null;
         }
 
         // Get player

@@ -51,10 +51,10 @@ namespace Rolayther.Controllers
 
             try
             {
-                var isCreated = await _playerService.CreatePlayer(playerRequestDto);
+                var newPlayerId = await _playerService.CreatePlayer(playerRequestDto);
 
-                return isCreated
-                    ? Ok(new { Message = "Player created Successfully." })
+                return newPlayerId != null
+                    ? Ok(new { Message = "Player created Successfully.", PlayerId = newPlayerId })
                     : BadRequest(new { Message = "Failed to create Player." });
             }
             catch (Exception ex)
@@ -103,7 +103,9 @@ namespace Rolayther.Controllers
             {
                 playerId = player.PlayerId,
                 nickName = player.NickName,
-                email = player.Email
+                email = player.Email,
+                avatarImgUrl = player.AvatarImgUrl,
+                bioPlayer = player.BioPlayer
             });
         }
 

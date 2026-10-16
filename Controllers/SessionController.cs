@@ -79,10 +79,11 @@ namespace Rolayther.Controllers
             if (!await _access.CanManageMaster(User, sessionRequestDto.MasterId))
                 return StatusCode(StatusCodes.Status403Forbidden, new { Message = "Puoi creare sessioni solo a tuo nome." });
 
-            var isCreated = await _sessionService.CreateSession(sessionRequestDto);
-            if (isCreated)
+            var newSessionId = await _sessionService.CreateSession(sessionRequestDto);
+            if (newSessionId != null)
             {
-                return Ok(new { Message = "Session created Successfully." });
+                // SessionId serve al frontend per caricare subito la cover (POST {sessionId}/Cover)
+                return Ok(new { Message = "Session created Successfully.", SessionId = newSessionId });
             }
             else
             {

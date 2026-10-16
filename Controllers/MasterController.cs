@@ -60,10 +60,10 @@ namespace Rolayther.Controllers
 
             try
             {
-                var isCreated = await _masterService.CreateMaster(masterRequestDto);
+                var newMasterId = await _masterService.CreateMaster(masterRequestDto);
 
-                return isCreated
-                    ? Ok(new { Message = "Master created Successfully." })
+                return newMasterId != null
+                    ? Ok(new { Message = "Master created Successfully.", MasterId = newMasterId })
                     : BadRequest(new { Message = "Failed to create master." });
             }
             catch (Exception ex)
@@ -187,8 +187,11 @@ namespace Rolayther.Controllers
             return NotFound(new { Message = "Master not found or update failed." });
         }
 
-        // Upload avatar (file al posto dell'URL)
-        [Authorize(Roles = "Admin, Master")]
+        // Upload avatar (file al posto dell'URL).
+        // Basta essere autenticati: chi può davvero cambiare l'avatar lo decide CanManageMaster (Admin o il Master stesso).
+        // Il ruolo "Master" non serve: chi si è appena registrato è ancora in attesa di approvazione e non lo ha,
+        // ma deve poter caricare la propria foto.
+        [Authorize]
         [HttpPost("{masterId}/Avatar")]
         [RequestSizeLimit(5_000_000)]
         public async Task<IActionResult> UploadAvatar(Guid masterId, IFormFile file)

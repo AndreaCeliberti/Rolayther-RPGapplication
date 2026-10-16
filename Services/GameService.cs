@@ -71,7 +71,7 @@ namespace Rolayther.Services
         }
 
         // Create Game
-        public async Task<bool> CreateGame(GameRequestDto gameRequestDto)
+        public async Task<Guid?> CreateGame(GameRequestDto gameRequestDto)
         {
             var newGame = new Game
             {
@@ -84,7 +84,8 @@ namespace Rolayther.Services
             };
             _context.Games.Add(newGame);
 
-            return await SaveAsync();
+            // Restituisce l'id del gioco creato (serve al frontend per caricare subito la cover)
+            return await SaveAsync() ? newGame.GameId : null;
 
         }
 

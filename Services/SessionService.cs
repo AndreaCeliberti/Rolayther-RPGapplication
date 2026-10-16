@@ -76,6 +76,10 @@ namespace Rolayther.Services
              NumbOfPlayer = s.NumbOfPlayer,
              SessionLink = s.SessionLink,
              CoverImgUrl = s.CoverImgUrl,
+             // Le chiavi servono alla dashboard admin (il modulo di modifica sessione le usa per precompilare master, gioco e genere)
+             MasterId = s.MasterId,
+             GameId = s.GameId,
+             GenreId = s.GenreId,
              Master = s.Master,
              Game = s.Game,
              Genre = s.Genre,
@@ -100,7 +104,7 @@ namespace Rolayther.Services
 
         // Create Session
 
-        public async Task<bool> CreateSession(SessionRequestDto sessionRequestDto)
+        public async Task<Guid?> CreateSession(SessionRequestDto sessionRequestDto)
         {
             var newSession = new Session
             {
@@ -118,7 +122,9 @@ namespace Rolayther.Services
                 Players = new List<Player>()
             };
             _context.Sessions.Add(newSession);
-            return await SaveAsync();
+
+            // Restituisce l'id della sessione creata (serve al frontend per caricare subito la cover)
+            return await SaveAsync() ? newSession.SessionId : null;
         }
 
         // Restituisce solo l'id del Master proprietario (null se la sessione non esiste).

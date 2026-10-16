@@ -45,10 +45,11 @@ namespace Rolayther.Controllers
             {
                 return BadRequest("Invalid game data.");
             }
-            var ISCreated = await _gameService.CreateGame(gameRequestDto);
-            if (ISCreated)
+            var newGameId = await _gameService.CreateGame(gameRequestDto);
+            if (newGameId != null)
             {
-                return Ok(new { Message = "Game created Succesfully." });
+                // GameId serve al frontend per caricare subito la cover (POST {gameId}/Cover)
+                return Ok(new { Message = "Game created Succesfully.", GameId = newGameId });
             }
             else
             {

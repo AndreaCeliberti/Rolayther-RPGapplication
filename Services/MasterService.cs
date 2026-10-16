@@ -141,7 +141,7 @@ namespace Rolayther.Services
 
         // Create Master
         
-        public async Task<bool> CreateMaster(MasterRequestDto masterRequestDto)
+        public async Task<Guid?> CreateMaster(MasterRequestDto masterRequestDto)
         {
             var newMaster = new Master
             {
@@ -161,7 +161,7 @@ namespace Rolayther.Services
                 MasterPlatforms = new List<MasterPlatform>()
             };
             _context.Masters.Add(newMaster);
-            return await SaveAsync();
+            return await SaveAsync() ? newMaster.MasterId : null;
         }
 
         // Get Master by Id

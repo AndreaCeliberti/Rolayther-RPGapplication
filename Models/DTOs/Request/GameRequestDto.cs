@@ -9,7 +9,7 @@ namespace Rolayther.Models.DTOs.Request
         public string Title { get; set; }
         [Required]
         public string Description { get; set; }
-        [Required]
+        // Facoltativo alla creazione: la cover si carica come file subito dopo (POST /Game/{gameId}/Cover)
         public string? CoverImageUrl { get; set; }
     }
 }

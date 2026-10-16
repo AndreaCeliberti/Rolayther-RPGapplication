@@ -69,7 +69,7 @@ namespace Rolayther.Services
         }
 
         // Create genre
-        public async Task<bool> CreateGenre(GenreRequestDto genreRequestDto)
+        public async Task<Guid?> CreateGenre(GenreRequestDto genreRequestDto)
         {
             var newGenre = new Genre
             {
@@ -80,7 +80,9 @@ namespace Rolayther.Services
                 
             };
             _context.Genres.Add(newGenre);
-            return await SaveAsync();
+
+            // Restituisce l'id del genere creato (serve al frontend per caricare subito l'immagine)
+            return await SaveAsync() ? newGenre.GenreId : null;
         }
 
         //Soft delete
