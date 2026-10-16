@@ -6,6 +6,7 @@ using Rolayther.Helpers;
 using Rolayther.Models.DTOs.Request;
 using Rolayther.Models.Entities;
 using Rolayther.Services;
+using Rolayther.Services.Mail;
 using System.Data;
 using System.Security.Claims;
 
@@ -17,12 +18,23 @@ namespace Rolayther.Controllers
     {
         private readonly SessionService _sessionService;
         private readonly ResourceAccessService _access;
+        private readonly IMailJobQueue _mailQueue;
 
-        public SessionController(SessionService sessionService, ResourceAccessService access)
+        public SessionController(SessionService sessionService, ResourceAccessService access, IMailJobQueue mailQueue)
         {
             _sessionService = sessionService;
             _access = access;
+            _mailQueue = mailQueue;
         }
+
+        // Risposta uniforme per le azioni che richiedono l'email confermata (iscriversi a una sessione, crearla).
+        // Il campo "code" permette al frontend di mostrare il pulsante "Reinvia email di conferma".
+        private IActionResult EmailNotConfirmed(string action) =>
+            StatusCode(StatusCodes.Status403Forbidden, new
+            {
+                message = $"Per {action} devi prima confermare la tua email: ti abbiamo scritto un link, controlla anche lo spam oppure richiedine uno nuovo.",
+                code = "EmailNotConfirmed"
+            });
 
         // Get all sessions 
 
@@ -79,9 +91,16 @@ namespace Rolayther.Controllers
             if (!await _access.CanManageMaster(User, sessionRequestDto.MasterId))
                 return StatusCode(StatusCodes.Status403Forbidden, new { Message = "Puoi creare sessioni solo a tuo nome." });
 
+            // Per creare una sessione serve l'email confermata (l'Admin è escluso)
+            if (!await _access.HasConfirmedEmail(User))
+                return EmailNotConfirmed("creare una sessione");
+
             var newSessionId = await _sessionService.CreateSession(sessionRequestDto);
             if (newSessionId != null)
             {
+                // Email "sessione creata" al Master, in background: non rallenta né può far fallire la risposta
+                _mailQueue.TryEnqueue(new SessionCreatedJob(newSessionId.Value, CreatedByAdmin: _access.IsAdmin(User)));
+
                 // SessionId serve al frontend per caricare subito la cover (POST {sessionId}/Cover)
                 return Ok(new { Message = "Session created Successfully.", SessionId = newSessionId });
             }
@@ -185,8 +204,16 @@ namespace Rolayther.Controllers
                 if (!await _access.CanManagePlayer(User, playerId))
                     return StatusCode(StatusCodes.Status403Forbidden, new { message = "Puoi iscrivere solo te stesso." });
 
+                // Per iscriversi serve l'email confermata (l'Admin è escluso)
+                if (!await _access.HasConfirmedEmail(User))
+                    return EmailNotConfirmed("iscriverti a una sessione");
+
                 var ok = await _sessionService.AddPlayerToSession(sessionId, playerId, userId, role);
                 if (!ok) return NotFound(new { message = "Session o player non trovati" });
+
+                // Iscrizione già salvata: le email partono in background (conferma al giocatore, avviso al Master)
+                _mailQueue.TryEnqueue(new SessionJoinedPlayerJob(sessionId, playerId));
+                _mailQueue.TryEnqueue(new SessionJoinedMasterJob(sessionId, playerId));
 
                 return Ok(true);
             }

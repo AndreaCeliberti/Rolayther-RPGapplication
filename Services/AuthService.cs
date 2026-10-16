@@ -5,6 +5,7 @@ using Rolayther.Models.DTOs.Request;
 using Rolayther.Models.DTOs.Response;
 using Rolayther.Models.Entities;
 using Rolayther.Models.Enums;
+using Rolayther.Services.Mail;
 using Serilog;
 
 namespace Rolayther.Services
@@ -17,11 +18,31 @@ namespace Rolayther.Services
 
         private readonly IConfiguration _configuration;
 
-        public AuthService(ApplicationDbContext context, UserManager<ApplicationUser> userManager, JwtTokenService jwtTokenService, IConfiguration configuration) : base(context)
+        private readonly EmailNotificationService _emailNotifications;
+
+        private readonly EmailConfirmationTokenService _emailTokens;
+
+        private readonly ResendThrottle _resendThrottle;
+
+        private readonly IMailJobQueue _mailQueue;
+
+        public AuthService(
+            ApplicationDbContext context,
+            UserManager<ApplicationUser> userManager,
+            JwtTokenService jwtTokenService,
+            IConfiguration configuration,
+            EmailNotificationService emailNotifications,
+            EmailConfirmationTokenService emailTokens,
+            ResendThrottle resendThrottle,
+            IMailJobQueue mailQueue) : base(context)
         {
             _userManager = userManager;
             _jwtTokenService = jwtTokenService;
             _configuration = configuration;
+            _emailNotifications = emailNotifications;
+            _emailTokens = emailTokens;
+            _resendThrottle = resendThrottle;
+            _mailQueue = mailQueue;
         }
 
         private async Task<RefreshToken> CreateAndSaveRefreshToken(ApplicationUser user)
@@ -87,7 +108,8 @@ namespace Rolayther.Services
                     AccessToken = newJwt,
                     RefreshToken = newRefreshToken.Token,
                     Role = roles.FirstOrDefault() ?? "",
-                    ExpiresAt = expiration
+                    ExpiresAt = expiration,
+                    EmailConfirmed = existingToken.User.EmailConfirmed
                 };
 
             }
@@ -147,95 +169,108 @@ namespace Rolayther.Services
 
         }
 
-        //service per la registrazione del player, con transazione per assicurare la coerenza dei dati tra Identity e Player
-        public async Task<bool> RegisterPlayerAsync(PlayerRequestDto dto)
+        //service per la registrazione del player, con transazione per assicurare la coerenza dei dati tra Identity e Player.
+        //Dopo il commit parte l'email di conferma: se l'invio fallisce la registrazione resta valida (EmailSent = false)
+        //e l'utente può chiedere un nuovo invio.
+        public async Task<RegistrationResult> RegisterPlayerAsync(PlayerRequestDto dto)
         {
-            using var transaction = await _context.Database.BeginTransactionAsync();
+            ApplicationUser? user = null;
 
-            try
+            using (var transaction = await _context.Database.BeginTransactionAsync())
             {
-                var user = new ApplicationUser
+                try
                 {
-                    UserName = dto.Email,
-                    Email = dto.Email,
-                    Name = dto.Name,
-                    Surname = dto.Surname
-                };
+                    user = new ApplicationUser
+                    {
+                        UserName = dto.Email,
+                        Email = dto.Email,
+                        Name = dto.Name,
+                        Surname = dto.Surname
+                    };
 
-                var result = await _userManager.CreateAsync(user, dto.Password);
-                if (!result.Succeeded)
-                    return false;
+                    var result = await _userManager.CreateAsync(user, dto.Password);
+                    if (!result.Succeeded)
+                        return RegistrationResult.Failed;
 
-                await _userManager.AddToRoleAsync(user, "Player");
+                    await _userManager.AddToRoleAsync(user, "Player");
 
-                var player = new Player
+                    var player = new Player
+                    {
+                        PlayerId = Guid.NewGuid(),
+                        Name = dto.Name,
+                        Surname = dto.Surname,
+                        NickName = dto.NickName,
+                        DateOfBirth = dto.DateOfBirth,
+                        AvatarImgUrl = dto.AvatarImgUrl,
+                        Email = dto.Email,
+                        BioPlayer = dto.BioPlayer,
+                        CreatedAt = DateTime.UtcNow
+                    };
+
+                    _context.Players.Add(player);
+                    await _context.SaveChangesAsync();
+
+                    await transaction.CommitAsync();
+                }
+                catch
                 {
-                    PlayerId = Guid.NewGuid(),
-                    Name = dto.Name,
-                    Surname = dto.Surname,
-                    NickName = dto.NickName,
-                    DateOfBirth = dto.DateOfBirth,
-                    AvatarImgUrl = dto.AvatarImgUrl,
-                    Email = dto.Email,
-                    BioPlayer = dto.BioPlayer,
-                    CreatedAt = DateTime.UtcNow
-                };
-
-                _context.Players.Add(player);
-                await _context.SaveChangesAsync();
-
-                await transaction.CommitAsync();
-                return true;
+                    await transaction.RollbackAsync();
+                    return RegistrationResult.Failed;
+                }
             }
-            catch
-            {
-                await transaction.RollbackAsync();
-                return false;
-            }
+
+            var emailSent = await _emailNotifications.SendEmailConfirmationAsync(user, isMasterRequest: false);
+            return new RegistrationResult(true, emailSent);
         }
 
         //service per la registrazione del master, con transazione per assicurare la coerenza dei dati tra Identity e Master
 
-        public async Task<bool> RegisterMasterAsync(MasterRequestDto dto)
+        public async Task<RegistrationResult> RegisterMasterAsync(MasterRequestDto dto)
         {
-            using var transaction = await _context.Database.BeginTransactionAsync();
-            try
+            ApplicationUser? user = null;
+
+            using (var transaction = await _context.Database.BeginTransactionAsync())
             {
-                var user = new ApplicationUser
+                try
                 {
-                    UserName = dto.Email,
-                    Email = dto.Email,
-                    Name = dto.Name,
-                    Surname = dto.Surname
-                };
-                var result = await _userManager.CreateAsync(user, dto.Password);
-                if (!result.Succeeded)
-                    return false;
-                // Il ruolo "Master" NON viene più assegnato qui: la richiesta resta Pending
-                // finché un Admin non la approva (vedi MasterService.ApproveMaster).
-                var master = new Master
+                    user = new ApplicationUser
+                    {
+                        UserName = dto.Email,
+                        Email = dto.Email,
+                        Name = dto.Name,
+                        Surname = dto.Surname
+                    };
+                    var result = await _userManager.CreateAsync(user, dto.Password);
+                    if (!result.Succeeded)
+                        return RegistrationResult.Failed;
+                    // Il ruolo "Master" NON viene più assegnato qui: la richiesta resta Pending
+                    // finché un Admin non la approva (vedi MasterService.ApproveMaster).
+                    var master = new Master
+                    {
+                        MasterId = Guid.NewGuid(),
+                        Name = dto.Name,
+                        Surname = dto.Surname,
+                        NickName = dto.NickName,
+                        DateOfBirth = dto.DateOfBirth,
+                        AvatarImgUrl = dto.AvatarImgUrl,
+                        Email = dto.Email,
+                        BioMaster = dto.BioMaster,
+                        CreatedAt = DateTime.UtcNow,
+                        Status = ApprovalStatus.Pending
+                    };
+                    _context.Masters.Add(master);
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+                }
+                catch
                 {
-                    MasterId = Guid.NewGuid(),
-                    Name = dto.Name,
-                    Surname = dto.Surname,
-                    NickName = dto.NickName,
-                    DateOfBirth = dto.DateOfBirth,
-                    AvatarImgUrl = dto.AvatarImgUrl,
-                    Email = dto.Email,
-                    BioMaster = dto.BioMaster,
-                    CreatedAt = DateTime.UtcNow,
-                    Status = ApprovalStatus.Pending
-                };
-                _context.Masters.Add(master);
-                await _context.SaveChangesAsync();
-                await transaction.CommitAsync();
-                return true;
+                    await transaction.RollbackAsync();
+                    return RegistrationResult.Failed;
+                }
             }
-            catch
-            {
-                await transaction.RollbackAsync();
-                return false;
-            }
+
+            var emailSent = await _emailNotifications.SendEmailConfirmationAsync(user, isMasterRequest: true);
+            return new RegistrationResult(true, emailSent);
         }
 
         //service per il login dell'utente
@@ -271,7 +306,8 @@ namespace Rolayther.Services
                             AccessToken = newJwt,
                             RefreshToken = newRefreshToken.Token,
                             Role = roles.FirstOrDefault() ?? "User",
-                            ExpiresAt = expiration
+                            ExpiresAt = expiration,
+                            EmailConfirmed = user.EmailConfirmed
                         };
                     }
                     else
@@ -319,6 +355,76 @@ namespace Rolayther.Services
                 Log.Error(ex, "Logout failed");
                 return false;
             }
+        }
+
+        // ================== CONFERMA EMAIL ==================
+
+        // Conferma l'indirizzo con il token ricevuto per email (link /confirm-email?token=... del frontend).
+        // Il token è firmato e legato all'indirizzo email: se è stato manomesso, è scaduto o l'utente nel
+        // frattempo ha cambiato email, la conferma non avviene. Rifare la conferma è innocuo (AlreadyConfirmed).
+        public async Task<ConfirmEmailResult> ConfirmEmailAsync(string? token)
+        {
+            try
+            {
+                var check = _emailTokens.Validate(token);
+
+                if (check.Status == EmailTokenStatus.Invalid)
+                    return ConfirmEmailResult.Invalid;
+
+                var user = await _userManager.FindByIdAsync(check.UserId!);
+                if (user == null || user.IsDeleted)
+                    return ConfirmEmailResult.Invalid;
+
+                // Il token vale solo per l'indirizzo per cui è stato creato
+                if (!string.Equals(check.EmailFingerprint, EmailConfirmationTokenService.Fingerprint(user.Email ?? string.Empty), StringComparison.Ordinal))
+                    return ConfirmEmailResult.Invalid;
+
+                if (user.EmailConfirmed)
+                    return ConfirmEmailResult.AlreadyConfirmed;
+
+                if (check.Status == EmailTokenStatus.Expired)
+                    return ConfirmEmailResult.Expired;
+
+                user.EmailConfirmed = true;
+                var result = await _userManager.UpdateAsync(user);
+                if (!result.Succeeded)
+                {
+                    Log.Error("Conferma email non salvata per l'utente {UserId}: {Errors}", user.Id, string.Join("; ", result.Errors.Select(e => e.Description)));
+                    return ConfirmEmailResult.Invalid;
+                }
+
+                return ConfirmEmailResult.Confirmed;
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Conferma email fallita");
+                return ConfirmEmailResult.Invalid;
+            }
+        }
+
+        // Richiesta di un nuovo link di conferma. L'endpoint è pubblico, quindi:
+        //  - la risposta all'esterno è SEMPRE la stessa, sia che l'indirizzo esista o no (non si può scoprire chi è registrato);
+        //  - l'email vera parte in background, così anche i tempi di risposta non rivelano nulla;
+        //  - ogni indirizzo ha una pausa minima e un tetto orario (vedi ResendThrottle).
+        public void RequestConfirmationResend(string? email)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+                return;
+
+            if (!_resendThrottle.TryAcquire(email))
+                return;
+
+            _mailQueue.TryEnqueue(new ConfirmationResendJob(email.Trim()));
+        }
+
+        public int ResendCooldownSeconds => _resendThrottle.CooldownSeconds;
+
+        // L'email dell'utente (già autenticato) risulta confermata?
+        public async Task<bool> IsEmailConfirmedAsync(string userId)
+        {
+            return await _context.Users
+                .AsNoTracking()
+                .AnyAsync(u => u.Id == userId && u.EmailConfirmed);
         }
     }
 }

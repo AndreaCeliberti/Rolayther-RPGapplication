@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Rolayther.Data;
 using Rolayther.Helpers;
+using Rolayther.Services.Mail;
 using System.Security.Claims;
 
 namespace Rolayther.Services
@@ -13,7 +15,12 @@ namespace Rolayther.Services
     // In caso di dubbio (email assente, risorsa inesistente) il controllo risponde false: si nega, non si concede.
     public class ResourceAccessService : ServiceBase
     {
-        public ResourceAccessService(ApplicationDbContext applicationDbContext) : base(applicationDbContext) { }
+        private readonly EmailOptions _emailOptions;
+
+        public ResourceAccessService(ApplicationDbContext applicationDbContext, IOptions<EmailOptions> emailOptions) : base(applicationDbContext)
+        {
+            _emailOptions = emailOptions.Value;
+        }
 
         public bool IsAdmin(ClaimsPrincipal user) => user.IsInRole(StringConstants.AdminRole);
 
@@ -41,6 +48,22 @@ namespace Rolayther.Services
             return await _context.Players
                 .AsNoTracking()
                 .AnyAsync(p => p.PlayerId == playerId && p.Email == email);
+        }
+
+        // L'email dell'utente è stata confermata? Serve per iscriversi alle sessioni e per crearle.
+        // L'Admin è escluso, e la regola si può spegnere da configurazione (Email:RequireConfirmedEmail = false).
+        // Chi non ha confermato può comunque accedere e navigare: senza conferma non ottiene solo queste due azioni.
+        public async Task<bool> HasConfirmedEmail(ClaimsPrincipal user)
+        {
+            if (!_emailOptions.RequireConfirmedEmail) return true;
+            if (IsAdmin(user)) return true;
+
+            var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrWhiteSpace(userId)) return false;
+
+            return await _context.Users
+                .AsNoTracking()
+                .AnyAsync(u => u.Id == userId && u.EmailConfirmed);
         }
 
         // Admin, oppure il Master proprietario di QUESTA sessione.
