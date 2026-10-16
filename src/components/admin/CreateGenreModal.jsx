@@ -3,11 +3,12 @@ import { Modal, Button, Form, Spinner } from "react-bootstrap";
 import { ToastContext } from "../../context/ToastContext";
 import { AuthContext } from "../../context/AuthContext";
 import { GenresApi } from "../../api/genres.api";
+import ImageUploadField from "../common/ImageUploadField";
+import { uploadAfterSave } from "../../utils/apiError";
 
 const initial = {
   name: "",
   description: "",
-  imageUrl: "",
 };
 
 export default function CreateGenreModal({ show, handleClose, onCreated }) {
@@ -19,18 +20,21 @@ export default function CreateGenreModal({ show, handleClose, onCreated }) {
   const [form, setForm] = useState(initial);
   const [validated, setValidated] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [imageFile, setImageFile] = useState(null);
 
   useEffect(() => {
     if (!show) {
       setForm(initial);
       setValidated(false);
       setSaving(false);
+      setImageFile(null);
     }
   }, [show]);
 
   const canSubmit = useMemo(() => {
-    return isAdmin && form.name.trim() && form.description.trim() && form.imageUrl.trim();
-  }, [isAdmin, form]);
+    // L'immagine è obbligatoria come prima (prima era un URL, ora è un file)
+    return Boolean(isAdmin && form.name.trim() && form.description.trim() && imageFile);
+  }, [isAdmin, form, imageFile]);
 
   const onChange = (e) => {
     const { name, value } = e.target;
@@ -41,6 +45,7 @@ export default function CreateGenreModal({ show, handleClose, onCreated }) {
     setForm(initial);
     setValidated(false);
     setSaving(false);
+    setImageFile(null);
     handleClose();
   };
 
@@ -61,13 +66,24 @@ export default function CreateGenreModal({ show, handleClose, onCreated }) {
 
     setSaving(true);
     try {
-      await GenresApi.create({
+      const res = await GenresApi.create({
         name: form.name.trim(),
         description: form.description.trim(),
-        imageUrl: form.imageUrl.trim(),
       });
 
-      showToast("Genere creato", "success");
+      // L'immagine si carica subito dopo la creazione (serve l'id del nuovo genere).
+      // Se il caricamento fallisce il genere resta creato: l'immagine si può aggiungere dalla tabella.
+      const newGenreId = res?.data?.genreId ?? res?.data?.GenreId;
+      const imageProblem = await uploadAfterSave(imageFile, newGenreId, GenresApi.uploadImage);
+
+      if (imageProblem) {
+        showToast(
+          `Genere creato, ma l'immagine non è stata caricata (${imageProblem}). Puoi aggiungerla dalla tabella.`,
+          "warning"
+        );
+      } else {
+        showToast("Genere creato ✅", "success");
+      }
       closeAndReset();
       onCreated?.();
     } catch (err) {
@@ -123,19 +139,16 @@ export default function CreateGenreModal({ show, handleClose, onCreated }) {
               </Form.Control.Feedback>
             </Form.Group>
 
-            <Form.Group className="mb-3">
-              <Form.Label>Image URL *</Form.Label>
-              <Form.Control
-                name="imageUrl"
-                value={form.imageUrl}
-                onChange={onChange}
+            <div className="mb-3">
+              <ImageUploadField
+                label="Immagine"
                 required
-                placeholder="https://..."
+                maxDimension={1600}
+                file={imageFile}
+                onChange={setImageFile}
+                disabled={saving}
               />
-              <Form.Control.Feedback type="invalid">
-                Inserisci un URL.
-              </Form.Control.Feedback>
-            </Form.Group>
+            </div>
 
             <div className="d-flex justify-content-end gap-2">
               <Button variant="outline-secondary" onClick={closeAndReset}>

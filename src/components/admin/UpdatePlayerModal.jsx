@@ -3,13 +3,15 @@ import { Modal, Button, Form, Row, Col, Spinner } from "react-bootstrap";
 import { ToastContext } from "../../context/ToastContext";
 import { AuthContext } from "../../context/AuthContext";
 import { PlayersApi } from "../../api/players.api";
+import ImageUploadField from "../common/ImageUploadField";
+import { uploadAfterSave } from "../../utils/apiError";
 
 const empty = {
   name: "",
   surname: "",
   nickName: "",
   dateOfBirth: "", // yyyy-mm-dd
-  avatarImgUrl: "",
+  avatarImgUrl: "", // URL attuale della foto (si cambia caricando un file)
   email: "",
   bioPlayer: "",
 };
@@ -37,6 +39,7 @@ export default function UpdatePlayerModal({
   const [form, setForm] = useState(empty);
   const [validated, setValidated] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [avatarFile, setAvatarFile] = useState(null);
 
   // opzionale: se vuoi ricaricare dal backend l’oggetto completo quando apri
   const [loadingFull, setLoadingFull] = useState(false);
@@ -45,6 +48,7 @@ export default function UpdatePlayerModal({
     setValidated(false);
     setSaving(false);
     setLoadingFull(false);
+    setAvatarFile(null);
     setForm(empty);
     handleClose();
   };
@@ -54,6 +58,7 @@ export default function UpdatePlayerModal({
     if (!show) return;
     if (!player) return;
 
+    setAvatarFile(null);
     setForm({
       name: player.name ?? "",
       surname: player.surname ?? "",
@@ -137,7 +142,14 @@ export default function UpdatePlayerModal({
 
       await PlayersApi.update(player.playerId, payload);
 
-      showToast("Player aggiornato ✅", "success");
+      // Dopo il salvataggio: l'upload imposta il nuovo URL della foto (il payload porta ancora quello attuale)
+      const photoProblem = await uploadAfterSave(avatarFile, player.playerId, PlayersApi.uploadAvatar);
+
+      if (photoProblem) {
+        showToast(`Player aggiornato, ma la foto non è stata caricata (${photoProblem}).`, "warning");
+      } else {
+        showToast("Player aggiornato ✅", "success");
+      }
       closeAndReset();
       onUpdated?.();
     } catch (err) {
@@ -252,15 +264,15 @@ export default function UpdatePlayerModal({
               </Col>
 
               <Col xs={12}>
-                <Form.Group>
-                  <Form.Label>Avatar URL</Form.Label>
-                  <Form.Control
-                    name="avatarImgUrl"
-                    value={form.avatarImgUrl}
-                    onChange={onChange}
-                    placeholder="https://..."
-                  />
-                </Form.Group>
+                <ImageUploadField
+                  label="Foto profilo"
+                  shape="circle"
+                  maxDimension={512}
+                  file={avatarFile}
+                  currentUrl={form.avatarImgUrl}
+                  onChange={setAvatarFile}
+                  disabled={saving}
+                />
               </Col>
 
               <Col xs={12}>

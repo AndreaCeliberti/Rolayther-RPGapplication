@@ -3,13 +3,15 @@ import { Modal, Button, Form, Row, Col, Spinner } from "react-bootstrap";
 import { ToastContext } from "../../context/ToastContext";
 import { AuthContext } from "../../context/AuthContext";
 import { MastersApi } from "../../api/masters.api";
+import ImageUploadField from "../common/ImageUploadField";
+import { uploadAfterSave } from "../../utils/apiError";
 
 const empty = {
   name: "",
   surname: "",
   nickName: "",
   dateOfBirth: "", // yyyy-mm-dd
-  avatarImgUrl: "",
+  avatarImgUrl: "", // URL attuale della foto (si cambia caricando un file)
   email: "",
   bioMaster: "",
   password: "",
@@ -38,6 +40,7 @@ export default function UpdateMasterModal({
   const [form, setForm] = useState(empty);
   const [validated, setValidated] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [avatarFile, setAvatarFile] = useState(null);
 
   const [loadingFull, setLoadingFull] = useState(false);
 
@@ -45,6 +48,7 @@ export default function UpdateMasterModal({
     setValidated(false);
     setSaving(false);
     setLoadingFull(false);
+    setAvatarFile(null);
     setForm(empty);
     handleClose();
   };
@@ -53,6 +57,7 @@ export default function UpdateMasterModal({
     if (!show) return;
     if (!master) return;
 
+    setAvatarFile(null);
     setForm((prev) => ({
       ...prev,
       name: master.name ?? "",
@@ -172,7 +177,14 @@ export default function UpdateMasterModal({
 
       await MastersApi.update(master.masterId, payload);
 
-      showToast("Master aggiornato ", "success");
+      // Dopo il salvataggio: l'upload imposta il nuovo URL della foto (il payload porta ancora quello attuale)
+      const photoProblem = await uploadAfterSave(avatarFile, master.masterId, MastersApi.uploadAvatar);
+
+      if (photoProblem) {
+        showToast(`Master aggiornato, ma la foto non è stata caricata (${photoProblem}).`, "warning");
+      } else {
+        showToast("Master aggiornato ✅", "success");
+      }
       closeAndReset();
       onUpdated?.();
     } catch (err) {
@@ -285,15 +297,15 @@ export default function UpdateMasterModal({
               </Col>
               
               <Col xs={12}>
-                <Form.Group>
-                  <Form.Label>Avatar URL</Form.Label>
-                  <Form.Control
-                    name="avatarImgUrl"
-                    value={form.avatarImgUrl}
-                    onChange={onChange}
-                    placeholder="https://..."
-                  />
-                </Form.Group>
+                <ImageUploadField
+                  label="Foto profilo"
+                  shape="circle"
+                  maxDimension={512}
+                  file={avatarFile}
+                  currentUrl={form.avatarImgUrl}
+                  onChange={setAvatarFile}
+                  disabled={saving}
+                />
               </Col>
 
               <Col xs={12}>

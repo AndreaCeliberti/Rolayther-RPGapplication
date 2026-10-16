@@ -1,4 +1,5 @@
 import api from "./axios";
+import { postFile } from "./upload";
 
 export const MastersApi = {
   getAll: () => api.get("/Master/GetAllMasters"),
@@ -18,6 +19,16 @@ export const MastersApi = {
   update: (masterId, payload) =>
     api.put(`/Master/UpdateMaster/${masterId}`, payload),
 
+  // Foto profilo: carica il file (JPG, PNG, WebP, GIF) al posto dell'URL. Risposta: { avatarImgUrl }
+  uploadAvatar: (masterId, file) => postFile(`/Master/${masterId}/Avatar`, file),
+
   delete: (masterId) =>
     api.delete(`/Master/DeleteMaster/${masterId}`),
+
+  getPending: () => api.get("/Master/PendingRequests"),
+
+  approve: (masterId) => api.put(`/Master/${masterId}/Approve`),
+
+  reject: (masterId, reason) =>
+    api.put(`/Master/${masterId}/Reject`, { reason }),
 };

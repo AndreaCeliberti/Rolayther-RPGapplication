@@ -1,4 +1,5 @@
 import api from "./axios";
+import { postFile } from "./upload";
 
 // Route backend: /api/Session/...
 export const SessionsApi = {
@@ -12,6 +13,9 @@ export const SessionsApi = {
   update: (sessionId, payload) => api.put(`/Session/UpdateSession/${sessionId}`, payload),
 
   delete: (sessionId) => api.delete(`/Session/DeleteSession/${sessionId}`),
+
+  // Cover: carica il file al posto dell'URL. Risposta: { coverImgUrl }
+  uploadCover: (sessionId, file) => postFile(`/Session/${sessionId}/Cover`, file),
 
   changeState: (sessionId, payload) =>
     api.patch(`/Session/${sessionId}/ChangeState`, payload),

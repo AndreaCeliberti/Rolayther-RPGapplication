@@ -2,13 +2,14 @@ import { useContext, useMemo, useState } from "react";
 import { Modal, Button, Form, Row, Col, Spinner } from "react-bootstrap";
 import api from "../../api/axios";
 import { ToastContext } from "../../context/ToastContext";
+import ImageUploadField from "../common/ImageUploadField";
+import { uploadAvatarAfterRegistration } from "../../api/upload";
 
 const initialState = {
   name: "",
   surname: "",
   nickName: "",
   dateOfBirth: "", // yyyy-mm-dd
-  avatarImgUrl: "",
   bioMaster: "",
   email: "",
   password: "",
@@ -22,6 +23,7 @@ export default function RegisterMasterModal({ show, handleClose, openLogin }) {
   const [saving, setSaving] = useState(false);
   const [validated, setValidated] = useState(false);
   const [pwMismatch, setPwMismatch] = useState(false);
+  const [avatarFile, setAvatarFile] = useState(null);
 
   const canSubmit = useMemo(() => {
     return (
@@ -54,6 +56,7 @@ export default function RegisterMasterModal({ show, handleClose, openLogin }) {
     setForm(initialState);
     setValidated(false);
     setPwMismatch(false);
+    setAvatarFile(null);
     setSaving(false);
     handleClose();
   };
@@ -77,7 +80,6 @@ export default function RegisterMasterModal({ show, handleClose, openLogin }) {
         surname: form.surname,
         nickName: form.nickName,
         dateOfBirth: form.dateOfBirth, // DateOnly
-        avatarImgUrl: form.avatarImgUrl || null,
         bioMaster: form.bioMaster || null,
         email: form.email,
         password: form.password,
@@ -86,7 +88,20 @@ export default function RegisterMasterModal({ show, handleClose, openLogin }) {
 
       await api.post("/Auth/register-master", payload);
 
-      showToast("Creazione Master completata", "success");
+      // La foto si carica dopo la registrazione (serve un account esistente).
+      // Se il caricamento fallisce la registrazione resta valida: si può riprovare dal profilo.
+      const photoProblem = await uploadAvatarAfterRegistration({
+        role: "master",
+        email: form.email,
+        password: form.password,
+        file: avatarFile,
+      });
+
+      if (photoProblem) {
+        showToast(`Master creato, ma la foto non è stata caricata (${photoProblem}).`, "warning");
+      } else {
+        showToast("Creazione Master completata", "success");
+      }
       resetAndClose();
       //openLogin?.();
     } catch (err) {
@@ -187,15 +202,14 @@ export default function RegisterMasterModal({ show, handleClose, openLogin }) {
             </Col>
           </Row>
 
-          <Form.Group className="mb-2">
-            <Form.Label>Avatar URL</Form.Label>
-            <Form.Control
-              name="avatarImgUrl"
-              value={form.avatarImgUrl}
-              onChange={onChange}
-              placeholder="https://..."
-            />
-          </Form.Group>
+          <ImageUploadField
+            label="Foto profilo"
+            shape="circle"
+            maxDimension={512}
+            file={avatarFile}
+            onChange={setAvatarFile}
+            disabled={saving}
+          />
 
           <Form.Group className="mb-3">
             <Form.Label>Bio</Form.Label>

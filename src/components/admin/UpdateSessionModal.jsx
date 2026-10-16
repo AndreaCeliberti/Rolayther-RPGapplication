@@ -7,6 +7,8 @@ import { SessionsApi } from "../../api/sessions.api";
 import { GamesApi } from "../../api/games.api";
 import { GenresApi } from "../../api/genres.api";
 import { MastersApi } from "../../api/masters.api";
+import ImageUploadField from "../common/ImageUploadField";
+import { uploadAfterSave } from "../../utils/apiError";
 
 const empty = {
   sessionTitle: "",
@@ -14,7 +16,8 @@ const empty = {
   scheduledAt: "", // datetime-local string
   duration: "",
   numbOfPlayer: 4,
-  coverImgUrl: "",
+  sessionLink: "",
+  coverImgUrl: "", // URL attuale della cover (si cambia caricando un file)
   masterId: "",
   gameId: "",
   genreId: "",
@@ -42,6 +45,7 @@ export default function UpdateSessionModal({ show, handleClose, onUpdated, sessi
   const [form, setForm] = useState(empty);
   const [validated, setValidated] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [coverFile, setCoverFile] = useState(null);
 
   const [loadingRefs, setLoadingRefs] = useState(false);
   const [games, setGames] = useState([]);
@@ -51,6 +55,7 @@ export default function UpdateSessionModal({ show, handleClose, onUpdated, sessi
   const closeAndReset = () => {
     setValidated(false);
     setSaving(false);
+    setCoverFile(null);
     setForm(empty);
     handleClose();
   };
@@ -60,12 +65,14 @@ export default function UpdateSessionModal({ show, handleClose, onUpdated, sessi
     if (!show) return;
     if (!session) return;
 
+    setCoverFile(null);
     setForm({
       sessionTitle: session.sessionTitle ?? "",
       sessionDescription: session.sessionDescription ?? "",
       scheduledAt: isoToLocalInput(session.scheduledAt),
       duration: session.duration ?? "",
       numbOfPlayer: session.numbOfPlayer ?? 4,
+      sessionLink: session.sessionLink ?? "",
       coverImgUrl: session.coverImgUrl ?? "",
       masterId: session.masterId ?? "",
       gameId: session.gameId ?? "",
@@ -152,6 +159,9 @@ export default function UpdateSessionModal({ show, handleClose, onUpdated, sessi
         scheduledAt: scheduledIso,
         duration: form.duration.trim(),
         numbOfPlayer: Number(form.numbOfPlayer),
+        sessionLink: form.sessionLink?.trim() ? form.sessionLink.trim() : null,
+        // URL della cover attuale: va rimandato, altrimenti l'aggiornamento la cancellerebbe.
+        // Se è stato scelto un nuovo file lo si carica subito dopo e sostituisce questo valore.
         coverImgUrl: form.coverImgUrl?.trim() ? form.coverImgUrl.trim() : null,
         masterId: form.masterId,
         gameId: form.gameId,
@@ -160,7 +170,14 @@ export default function UpdateSessionModal({ show, handleClose, onUpdated, sessi
 
       await SessionsApi.update(session.sessionId, payload);
 
-      showToast("Sessione aggiornata ✅", "success");
+      // Dopo il salvataggio, così il nuovo URL della cover non viene sovrascritto da quello vecchio del payload
+      const coverProblem = await uploadAfterSave(coverFile, session.sessionId, SessionsApi.uploadCover);
+
+      if (coverProblem) {
+        showToast(`Sessione aggiornata, ma la cover non è stata caricata (${coverProblem}).`, "warning");
+      } else {
+        showToast("Sessione aggiornata ✅", "success");
+      }
       closeAndReset();
       onUpdated?.();
     } catch (err) {
@@ -236,6 +253,18 @@ export default function UpdateSessionModal({ show, handleClose, onUpdated, sessi
                 </Form.Group>
               </Col>
 
+              <Col xs={12}>
+                <Form.Group>
+                  <Form.Label>Link alla piattaforma di gioco</Form.Label>
+                  <Form.Control
+                    name="sessionLink"
+                    value={form.sessionLink}
+                    onChange={onChange}
+                    placeholder="https://discord.gg/... "
+                  />
+                </Form.Group>
+              </Col>
+
               <Col xs={12} md={6}>
                 <Form.Group>
                   <Form.Label>Data & Ora *</Form.Label>
@@ -277,15 +306,14 @@ export default function UpdateSessionModal({ show, handleClose, onUpdated, sessi
               </Col>
 
               <Col xs={12}>
-                <Form.Group>
-                  <Form.Label>Cover URL</Form.Label>
-                  <Form.Control
-                    name="coverImgUrl"
-                    value={form.coverImgUrl}
-                    onChange={onChange}
-                    placeholder="https://..."
-                  />
-                </Form.Group>
+                <ImageUploadField
+                  label="Cover della sessione"
+                  maxDimension={1600}
+                  file={coverFile}
+                  currentUrl={form.coverImgUrl}
+                  onChange={setCoverFile}
+                  disabled={saving}
+                />
               </Col>
 
               <Col xs={12} md={4}>
