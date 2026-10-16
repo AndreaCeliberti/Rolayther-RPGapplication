@@ -8,10 +8,14 @@ export function ToastProvider({ children }) {
     show: false,
     message: "",
     variant: "success",
+    delay: 3000,
   });
 
-  const showToast = (message, variant = "success") => {
-    setToast({ show: true, message, variant });
+  // delay (ms) = quanto resta visibile. Se non lo si indica dipende dalla lunghezza del messaggio
+  // (da 3 a 10 secondi), così le frasi lunghe, come "controlla la tua email", si fanno leggere.
+  const showToast = (message, variant = "success", delay) => {
+    const automatic = Math.min(10000, Math.max(3000, String(message ?? "").length * 60));
+    setToast({ show: true, message, variant, delay: delay ?? automatic });
   };
 
   return (
@@ -23,7 +27,7 @@ export function ToastProvider({ children }) {
           bg={toast.variant}
           onClose={() => setToast({ ...toast, show: false })}
           show={toast.show}
-          delay={3000}
+          delay={toast.delay}
           autohide
         >
           <Toast.Body className="text-white">{toast.message}</Toast.Body>

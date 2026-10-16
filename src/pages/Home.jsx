@@ -5,6 +5,7 @@ import SessionCard from "../components/cards/SessionCard";
 import { AuthContext } from "../context/AuthContext";
 import { ToastContext } from "../context/ToastContext";
 import CreateSessionModal from "../components/admin/CreateSessionModal";
+import { apiErrorMessage } from "../utils/apiError";
 
 export default function Home() {
   const { user } = useContext(AuthContext);
@@ -43,8 +44,9 @@ export default function Home() {
       await SessionsApi.join(sessionId, user.playerId);
       showToast("Sei entrato nella sessione 🎉", "success");
       await loadSessions();
-    } catch {
-      showToast("Impossibile entrare nella sessione", "danger");
+    } catch (err) {
+      // il server spiega il motivo (es. "devi prima confermare la tua email")
+      showToast(apiErrorMessage(err, "Impossibile entrare nella sessione"), "danger", 6000);
     }
   };
 

@@ -16,7 +16,9 @@ const initialState = {
   confirmPassword: "",
 };
 
-export default function RegisterMasterModal({ show, handleClose, openLogin }) {
+// onRegistered({ email, emailSent, isMaster }): a richiesta inviata l'app apre la finestra "Controlla la tua email".
+// Senza onRegistered si torna al vecchio comportamento (si apre il login).
+export default function RegisterMasterModal({ show, handleClose, openLogin, onRegistered }) {
   const { showToast } = useContext(ToastContext);
 
   const [form, setForm] = useState(initialState);
@@ -86,7 +88,11 @@ export default function RegisterMasterModal({ show, handleClose, openLogin }) {
         confirmPassword: form.confirmPassword,
       };
 
-      await api.post("/Auth/register-master", payload);
+      const res = await api.post("/Auth/register-master", payload);
+
+      // emailSent false = richiesta registrata ma l'email di conferma non è partita (da lì si può chiedere un nuovo invio)
+      const emailSent = res.data?.emailSent !== false;
+      const registeredEmail = form.email;
 
       // La foto si carica dopo la registrazione (serve un account esistente).
       // Se il caricamento fallisce la registrazione resta valida: si può riprovare dal profilo.
@@ -100,16 +106,20 @@ export default function RegisterMasterModal({ show, handleClose, openLogin }) {
       if (photoProblem) {
         showToast(
           `Richiesta inviata, ma la foto non è stata caricata (${photoProblem}). Potrai aggiungerla dal tuo profilo quando sarai approvato.`,
-          "warning"
+          "warning",
+          6000
         );
-      } else {
+      } else if (!onRegistered) {
         showToast(
-          "Richiesta inviata ✅ Un amministratore deve approvarla prima che tu possa creare sessioni.",
-          "success"
+          "Richiesta inviata ✅ Conferma la tua email: un amministratore deve approvarla prima che tu possa creare sessioni.",
+          "success",
+          6000
         );
       }
       resetAndClose();
-      openLogin?.();
+
+      if (onRegistered) onRegistered({ email: registeredEmail, emailSent, isMaster: true });
+      else openLogin?.();
     } catch (err) {
       const msg =
         err?.response?.data?.message ||
