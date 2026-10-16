@@ -121,7 +121,17 @@ export default function App() {
     {/* CONTENUTO PAGINE */}
     <main className="app-main">
       <Routes>
-        <Route path="/" element={<Home />} />
+        <Route
+          path="/"
+          element={
+            <Home
+              openLogin={openLogin}
+              openRegisterPlayer={openRegPlayer}
+              openRegisterMaster={openRegMaster}
+              openCreateSession={() => setShowCreateSession(true)}
+            />
+          }
+        />
         <Route path="/sessions/:id" element={<SessionDetails />} />
         <Route path="/sessions" element={<Sessions />} />
         <Route path="/masters" element={<Masters />} />
