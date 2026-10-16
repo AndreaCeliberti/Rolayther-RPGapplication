@@ -20,4 +20,11 @@ export const MastersApi = {
 
   delete: (masterId) =>
     api.delete(`/Master/DeleteMaster/${masterId}`),
+
+  getPending: () => api.get("/Master/PendingRequests"),
+
+  approve: (masterId) => api.put(`/Master/${masterId}/Approve`),
+
+  reject: (masterId, reason) =>
+    api.put(`/Master/${masterId}/Reject`, { reason }),
 };

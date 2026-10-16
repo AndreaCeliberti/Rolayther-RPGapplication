@@ -65,10 +65,14 @@ export default function AdminDashboard() {
     sessions: true,
     players: true,
     masters: true,
+    pendingMasters: true,
     games: true,
     genres: true,
     platforms: true,
   });
+
+  const [pendingMasters, setPendingMasters] = useState([]);
+  const [approving, setApproving] = useState(null); // masterId in corso di approvazione/rifiuto
 
   const [sessions, setSessions] = useState([]);
   const [players, setPlayers] = useState([]);
@@ -125,6 +129,45 @@ export default function AdminDashboard() {
     }
   };
 
+  const loadPendingMasters = async () => {
+    setLoadingKey("pendingMasters", true);
+    try {
+      const res = await MastersApi.getPending();
+      setPendingMasters(res.data || []);
+    } catch (err) {
+      showToast(parseMsg(err, "Errore caricamento richieste"), "danger");
+      setPendingMasters([]);
+    } finally {
+      setLoadingKey("pendingMasters", false);
+    }
+  };
+
+  const handleApproveMaster = async (master) => {
+    setApproving(master.masterId);
+    try {
+      await MastersApi.approve(master.masterId);
+      showToast(`${master.nickName} approvato come Master`, "success");
+      await Promise.all([loadPendingMasters(), loadMasters()]);
+    } catch (err) {
+      showToast(parseMsg(err, "Approvazione fallita"), "danger");
+    } finally {
+      setApproving(null);
+    }
+  };
+
+  const handleRejectMaster = async (master) => {
+    setApproving(master.masterId);
+    try {
+      await MastersApi.reject(master.masterId);
+      showToast(`Richiesta di ${master.nickName} rifiutata`, "success");
+      await loadPendingMasters();
+    } catch (err) {
+      showToast(parseMsg(err, "Rifiuto fallito"), "danger");
+    } finally {
+      setApproving(null);
+    }
+  };
+
   const loadGames = async () => {
     setLoadingKey("games", true);
     try {
@@ -171,6 +214,7 @@ export default function AdminDashboard() {
     loadSessions();
     loadPlayers();
     loadMasters();
+    loadPendingMasters();
     loadGames();
     loadGenres();
     loadPlatforms();
@@ -557,6 +601,83 @@ const deleteBody = useMemo(() => {
                                   Cancella
                                 </Button>
 
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </Table>
+                  </div>
+                )}
+              </Tab>
+
+              {/* PENDING MASTER REQUESTS */}
+              <Tab
+                eventKey="pendingMasters"
+                title={`Richieste in attesa (${pendingMasters.length})`}
+              >
+                <div className="d-flex justify-content-between align-items-center mb-3 gap-2 flex-wrap">
+                  <div className="text-muted small">
+                    Richieste di registrazione come Master in attesa di approvazione.
+                  </div>
+                  <div className="d-flex gap-2 flex-wrap">
+                    <Button
+                      variant="outline-secondary"
+                      size="sm"
+                      onClick={loadPendingMasters}
+                    >
+                      ↻ Aggiorna
+                    </Button>
+                  </div>
+                </div>
+
+                {loading.pendingMasters ? (
+                  <div className="text-center py-5">
+                    <Spinner animation="border" />
+                  </div>
+                ) : pendingMasters.length === 0 ? (
+                  <EmptyState
+                    title="Nessuna richiesta in attesa"
+                    hint="Le nuove registrazioni Master compariranno qui."
+                    icon="⏳"
+                  />
+                ) : (
+                  <div className="table-responsive">
+                    <Table hover variant="dark" className="align-middle">
+                      <thead>
+                        <tr>
+                          <th>Nick</th>
+                          <th>Email</th>
+                          <th>Nome</th>
+                          <th className="text-end">Azioni</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pendingMasters.map((m) => (
+                          <tr key={m.masterId}>
+                            <td className="fw-semibold">{m.nickName}</td>
+                            <td className="text-muted">{m.email}</td>
+                            <td>
+                              {m.name} {m.surname}
+                            </td>
+                            <td className="text-end">
+                              <div className="d-inline-flex gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline-success"
+                                  disabled={approving === m.masterId}
+                                  onClick={() => handleApproveMaster(m)}
+                                >
+                                  Approva
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline-danger"
+                                  disabled={approving === m.masterId}
+                                  onClick={() => handleRejectMaster(m)}
+                                >
+                                  Rifiuta
+                                </Button>
                               </div>
                             </td>
                           </tr>
