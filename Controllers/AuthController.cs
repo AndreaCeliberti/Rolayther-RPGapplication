@@ -41,7 +41,7 @@ namespace Rolayther.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[RegisterPlayer] Payload: {System.Text.Json.JsonSerializer.Serialize(playerRequestDto)}");
+                // Il payload NON si scrive nel log: contiene la password in chiaro
                 Console.WriteLine($"[RegisterPlayer] ERROR: {ex}");
 
                 return BadRequest(new
@@ -70,7 +70,7 @@ namespace Rolayther.Controllers
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[RegisterMaster] Payload: {System.Text.Json.JsonSerializer.Serialize(masterRequestDto)}");
+                // Il payload NON si scrive nel log: contiene la password in chiaro
                 Console.WriteLine($"[RegisterMaster] ERROR: {ex}");
 
                 return BadRequest(new
