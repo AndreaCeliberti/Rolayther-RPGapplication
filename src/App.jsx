@@ -12,6 +12,9 @@ import AppNavbar from "./components/AppNavbar";
 import LoginModal from "./components/auth/LoginModal";
 import RegisterPlayerModal from "./components/auth/RegisterPlayerModal";
 import RegisterMasterModal from "./components/auth/RegisterMasterModal";
+import CheckEmailModal from "./components/auth/CheckEmailModal";
+import EmailConfirmBanner from "./components/auth/EmailConfirmBanner";
+import LoginLinkHandler from "./components/auth/LoginLinkHandler";
 
 import Home from "./pages/Home";
 import SessionDetails from "./pages/SessionDetails";
@@ -26,6 +29,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import CreateSessionModal from "./components/admin/CreateSessionModal";
 import AdminRoute from "./components/admin/AdminRoute";
 import MasterDetails from "./pages/MasterDetails";
+import ConfirmEmailPage from "./pages/ConfirmEmailPage";
 import AppFooter from "./components/AppFooter";
 
 export default function App() {
@@ -43,6 +47,11 @@ export default function App() {
   const closeRegMaster = () => setShowRegMaster(false);
   const [showCreateSession, setShowCreateSession] = useState(false);
 
+  // Dopo la registrazione: finestra "Controlla la tua email" (a chi è stata scritta, se l'email è partita, se è una richiesta Master)
+  const [checkEmail, setCheckEmail] = useState({ show: false, email: "", emailSent: true, isMaster: false });
+  const openCheckEmail = (info) => setCheckEmail({ show: true, ...info });
+  const closeCheckEmail = () => setCheckEmail((c) => ({ ...c, show: false }));
+
   return (
     <AuthProvider>
       <ToastProvider>
@@ -54,6 +63,12 @@ export default function App() {
       openRegisterMaster={() => setShowRegMaster(true)}
       openCreateSession={() => setShowCreateSession(true)}
     />
+
+    {/* Avviso per chi non ha ancora confermato l'email (con "Reinvia email") */}
+    <EmailConfirmBanner />
+
+    {/* I pulsanti "Accedi" delle email puntano a /?login=1 */}
+    <LoginLinkHandler openLogin={openLogin} />
 
     {/* MODALI GLOBALI */}
     <LoginModal
@@ -76,6 +91,7 @@ export default function App() {
         closeRegPlayer();
         openLogin();
       }}
+      onRegistered={openCheckEmail}
     />
 
     <RegisterMasterModal
@@ -85,6 +101,16 @@ export default function App() {
         closeRegMaster();
         openLogin();
       }}
+      onRegistered={openCheckEmail}
+    />
+
+    <CheckEmailModal
+      show={checkEmail.show}
+      handleClose={closeCheckEmail}
+      email={checkEmail.email}
+      emailSent={checkEmail.emailSent}
+      isMaster={checkEmail.isMaster}
+      openLogin={openLogin}
     />
 
     <CreateSessionModal
@@ -105,6 +131,7 @@ export default function App() {
         <Route path="/playerProfile" element={<PlayerProfile />} />
         <Route path="/masterProfile" element={<MasterProfile />} />
         <Route path="/masters/:id" element={<MasterDetails />} />
+        <Route path="/confirm-email" element={<ConfirmEmailPage openLogin={openLogin} />} />
         <Route
           path="/admin"
           element={

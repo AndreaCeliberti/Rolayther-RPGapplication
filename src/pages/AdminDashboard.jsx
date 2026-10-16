@@ -36,6 +36,7 @@ import UpdatePlayerModal from "../components/admin/UpdatePlayerModal";
 import UpdateMasterModal from "../components/admin/UpdateMasterModal";
 import ConfirmDeleteModal from "../components/common/ConfirmDeleteModal";
 import CreateSessionModal from "../components/admin/CreateSessionModal";
+import MasterDecisionModal from "../components/admin/MasterDecisionModal";
 
 
 export default function AdminDashboard() {
@@ -75,6 +76,8 @@ export default function AdminDashboard() {
 
   const [pendingMasters, setPendingMasters] = useState([]);
   const [approving, setApproving] = useState(null); // masterId in corso di approvazione/rifiuto
+  // finestra con cui si approva (messaggio facoltativo) o si rifiuta (motivo obbligatorio): il testo va nell'email al candidato
+  const [decision, setDecision] = useState({ show: false, mode: "approve", master: null });
 
   const [sessions, setSessions] = useState([]);
   const [players, setPlayers] = useState([]);
@@ -144,27 +147,36 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleApproveMaster = async (master) => {
-    setApproving(master.masterId);
-    try {
-      await MastersApi.approve(master.masterId);
-      showToast(`${master.nickName} approvato come Master`, "success");
-      await Promise.all([loadPendingMasters(), loadMasters()]);
-    } catch (err) {
-      showToast(parseMsg(err, "Approvazione fallita"), "danger");
-    } finally {
-      setApproving(null);
-    }
-  };
+  const openDecision = (mode, master) => setDecision({ show: true, mode, master });
+  const closeDecision = () => setDecision((d) => ({ ...d, show: false }));
 
-  const handleRejectMaster = async (master) => {
+  // Conferma dalla finestra: text = messaggio di benvenuto (approvazione, può essere vuoto) o motivo (rifiuto)
+  const handleDecisionConfirm = async (text) => {
+    const { mode, master } = decision;
+    if (!master) return;
+
     setApproving(master.masterId);
     try {
-      await MastersApi.reject(master.masterId);
-      showToast(`Richiesta di ${master.nickName} rifiutata`, "success");
-      await loadPendingMasters();
+      const res =
+        mode === "approve"
+          ? await MastersApi.approve(master.masterId, text)
+          : await MastersApi.reject(master.masterId, text);
+
+      // emailSent false = decisione salvata, ma l'email al candidato NON è partita: l'Admin deve saperlo
+      const emailSent = res?.data?.emailSent !== false;
+      const done = mode === "approve" ? `${master.nickName} approvato come Master` : `Richiesta di ${master.nickName} rifiutata`;
+
+      if (emailSent) {
+        showToast(`${done}. Email inviata a ${master.email}.`, "success", 5000);
+      } else {
+        showToast(`${done}, ma l'email NON è partita: avvisa ${master.nickName} in un altro modo.`, "warning", 9000);
+      }
+
+      closeDecision();
+      await Promise.all(mode === "approve" ? [loadPendingMasters(), loadMasters()] : [loadPendingMasters()]);
     } catch (err) {
-      showToast(parseMsg(err, "Rifiuto fallito"), "danger");
+      // la finestra resta aperta: il testo scritto non si perde e si può riprovare
+      showToast(parseMsg(err, mode === "approve" ? "Approvazione fallita" : "Rifiuto fallito"), "danger");
     } finally {
       setApproving(null);
     }
@@ -678,7 +690,7 @@ const deleteBody = useMemo(() => {
                                   size="sm"
                                   variant="outline-success"
                                   disabled={approving === m.masterId}
-                                  onClick={() => handleApproveMaster(m)}
+                                  onClick={() => openDecision("approve", m)}
                                 >
                                   Approva
                                 </Button>
@@ -686,7 +698,7 @@ const deleteBody = useMemo(() => {
                                   size="sm"
                                   variant="outline-danger"
                                   disabled={approving === m.masterId}
-                                  onClick={() => handleRejectMaster(m)}
+                                  onClick={() => openDecision("reject", m)}
                                 >
                                   Rifiuta
                                 </Button>
@@ -984,6 +996,14 @@ const deleteBody = useMemo(() => {
             }}
             master={selectedMaster}
             onUpdated={loadMasters}
+        />
+        <MasterDecisionModal
+          show={decision.show}
+          mode={decision.mode}
+          master={decision.master}
+          busy={approving !== null && approving === decision.master?.masterId}
+          onClose={closeDecision}
+          onConfirm={handleDecisionConfirm}
         />
         <ConfirmDeleteModal
           show={deleteModal.show}

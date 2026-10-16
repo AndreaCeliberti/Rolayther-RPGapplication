@@ -14,6 +14,13 @@ export function apiErrorMessage(err, fallback = "Operazione non riuscita") {
   return fallback;
 }
 
+// Codice di errore "macchina" che il backend aggiunge ad alcune risposte (es. "EmailNotConfirmed", "TokenExpired"),
+// così l'interfaccia può reagire senza confrontare testi.
+export function apiErrorCode(err) {
+  const data = err?.response?.data;
+  return data?.code || data?.Code || null;
+}
+
 // Carica un file DOPO il salvataggio principale (creazione o modifica di un elemento).
 // Se il caricamento fallisce l'elemento resta comunque salvato: la funzione non lancia mai e
 // restituisce "" se è andato tutto bene, oppure il motivo dell'errore da mostrare all'utente.

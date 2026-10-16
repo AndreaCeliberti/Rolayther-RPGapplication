@@ -16,7 +16,9 @@ const initialState = {
   confirmPassword: "",
 };
 
-export default function RegisterPlayerModal({ show, handleClose, openLogin }) {
+// onRegistered({ email, emailSent, isMaster }): a registrazione riuscita l'app apre la finestra "Controlla la tua email".
+// Senza onRegistered si torna al vecchio comportamento (si apre il login).
+export default function RegisterPlayerModal({ show, handleClose, openLogin, onRegistered }) {
   const { showToast } = useContext(ToastContext);
 
   const [form, setForm] = useState(initialState);
@@ -88,7 +90,11 @@ export default function RegisterPlayerModal({ show, handleClose, openLogin }) {
         confirmPassword: form.confirmPassword,
       };
 
-      await api.post("/Auth/register-player", payload);
+      const res = await api.post("/Auth/register-player", payload);
+
+      // emailSent false = account creato ma l'email di conferma non è partita (da lì si può chiedere un nuovo invio)
+      const emailSent = res.data?.emailSent !== false;
+      const registeredEmail = form.email;
 
       // La foto si carica dopo la registrazione (serve un account esistente).
       // Se il caricamento fallisce la registrazione resta valida: si può riprovare dal profilo.
@@ -102,13 +108,16 @@ export default function RegisterPlayerModal({ show, handleClose, openLogin }) {
       if (photoProblem) {
         showToast(
           `Registrazione completata, ma la foto non è stata caricata (${photoProblem}). Potrai aggiungerla dal tuo profilo.`,
-          "warning"
+          "warning",
+          6000
         );
-      } else {
-        showToast("Registrazione Player completata Ora puoi fare login", "success");
+      } else if (!onRegistered) {
+        showToast("Registrazione completata: controlla la tua email per confermare l'indirizzo.", "success", 6000);
       }
       resetAndClose();
-      openLogin?.(); // apre login modal se passato dal parent
+
+      if (onRegistered) onRegistered({ email: registeredEmail, emailSent, isMaster: false });
+      else openLogin?.(); // apre login modal se passato dal parent
     } catch (err) {
       const msg =
         err?.response?.data?.message ||
