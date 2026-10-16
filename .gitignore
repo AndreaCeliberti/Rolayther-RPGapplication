@@ -361,3 +361,6 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+# File caricati dagli utenti (avatar, cover, materiale privato delle sessioni): mai nel repository
+wwwroot/uploads/
+App_Data/private-uploads/

@@ -1,6 +1,8 @@
-﻿using Microsoft.Data.SqlClient;
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Rolayther.Data;
+using Rolayther.Helpers;
 using Rolayther.Models.DTOs.Request;
 using Rolayther.Models.DTOs.Response;
 using Rolayther.Models.Entities;
@@ -12,7 +14,48 @@ namespace Rolayther.Services
 {
     public class SessionService : ServiceBase
     {
-        public SessionService(ApplicationDbContext applicationDbContext) : base(applicationDbContext) { }
+        private readonly IFileStorageService _fileStorage;
+
+        public SessionService(ApplicationDbContext applicationDbContext, IFileStorageService fileStorage) : base(applicationDbContext)
+        {
+            _fileStorage = fileStorage;
+        }
+
+        // Carica una nuova cover per la sessione, sostituendo quella precedente se era un nostro file
+        public async Task<string?> UpdateCoverAsync(Guid sessionId, IFormFile file)
+        {
+            var validationError = FileValidationHelper.ValidateImage(file);
+            if (validationError != null)
+                throw new InvalidOperationException(validationError);
+
+            var session = await _context.Sessions.FirstOrDefaultAsync(s => s.SessionId == sessionId);
+            if (session == null)
+                return null;
+
+            var oldKey = ExtractStorageKeyIfLocal(session.CoverImgUrl);
+
+            var storageKey = await _fileStorage.SaveAsync(file, "sessions", StorageVisibility.Public);
+            var publicUrl = _fileStorage.GetPublicUrl(storageKey);
+
+            session.CoverImgUrl = publicUrl;
+            _context.Sessions.Update(session);
+
+            var saved = await SaveAsync();
+            if (saved && oldKey != null)
+                _fileStorage.Delete(oldKey, StorageVisibility.Public);
+
+            return saved ? publicUrl : null;
+        }
+
+        private static string? ExtractStorageKeyIfLocal(string? imgUrl)
+        {
+            if (string.IsNullOrWhiteSpace(imgUrl))
+                return null;
+
+            var marker = "/uploads/";
+            var idx = imgUrl.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+            return idx < 0 ? null : imgUrl[(idx + marker.Length)..];
+        }
 
         // List Sessions
         public async Task<List<Session>> GetAllSessions()
@@ -33,6 +76,10 @@ namespace Rolayther.Services
              NumbOfPlayer = s.NumbOfPlayer,
              SessionLink = s.SessionLink,
              CoverImgUrl = s.CoverImgUrl,
+             // Le chiavi servono alla dashboard admin (il modulo di modifica sessione le usa per precompilare master, gioco e genere)
+             MasterId = s.MasterId,
+             GameId = s.GameId,
+             GenreId = s.GenreId,
              Master = s.Master,
              Game = s.Game,
              Genre = s.Genre,
@@ -57,7 +104,7 @@ namespace Rolayther.Services
 
         // Create Session
 
-        public async Task<bool> CreateSession(SessionRequestDto sessionRequestDto)
+        public async Task<Guid?> CreateSession(SessionRequestDto sessionRequestDto)
         {
             var newSession = new Session
             {
@@ -75,7 +122,20 @@ namespace Rolayther.Services
                 Players = new List<Player>()
             };
             _context.Sessions.Add(newSession);
-            return await SaveAsync();
+
+            // Restituisce l'id della sessione creata (serve al frontend per caricare subito la cover)
+            return await SaveAsync() ? newSession.SessionId : null;
+        }
+
+        // Restituisce solo l'id del Master proprietario (null se la sessione non esiste).
+        // Query leggera usata dal controller per verificare che un Master non riassegni la propria sessione.
+        public async Task<Guid?> GetSessionMasterId(Guid sessionId)
+        {
+            return await _context.Sessions
+                .AsNoTracking()
+                .Where(s => s.SessionId == sessionId)
+                .Select(s => (Guid?)s.MasterId)
+                .FirstOrDefaultAsync();
         }
 
         public async Task<List<Session>> GetSessionsByMasterId(Guid masterId)

@@ -45,14 +45,35 @@ namespace Rolayther.Controllers
             {
                 return BadRequest("Invalid game data.");
             }
-            var ISCreated = await _gameService.CreateGame(gameRequestDto);
-            if (ISCreated)
+            var newGameId = await _gameService.CreateGame(gameRequestDto);
+            if (newGameId != null)
             {
-                return Ok(new { Message = "Game created Succesfully." });
+                // GameId serve al frontend per caricare subito la cover (POST {gameId}/Cover)
+                return Ok(new { Message = "Game created Succesfully.", GameId = newGameId });
             }
             else
             {
                 return BadRequest(new { Message = "Failed to create game." });
+            }
+        }
+
+        // Upload cover (file al posto dell'URL)
+        [Authorize(Roles = "Admin")]
+        [HttpPost("{gameId}/Cover")]
+        [RequestSizeLimit(5_000_000)]
+        public async Task<IActionResult> UploadCover(Guid gameId, IFormFile file)
+        {
+            try
+            {
+                var url = await _gameService.UpdateCoverAsync(gameId, file);
+                if (url == null)
+                    return NotFound(new { Message = "Gioco non trovato o salvataggio fallito." });
+
+                return Ok(new { CoverImageUrl = url });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
             }
         }
 

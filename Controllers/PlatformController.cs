@@ -41,14 +41,35 @@ namespace Rolayther.Controllers
             {
                 return BadRequest("Invalid platform data.");
             }
-            var isCreated = await _platformService.CreatePlatform(platformRequestDto);
-            if (isCreated)
+            var newPlatformId = await _platformService.CreatePlatform(platformRequestDto);
+            if (newPlatformId != null)
             {
-                return Ok(new { Message = "Platform created Successfully." });
+                // PlatformId serve al frontend per caricare subito il logo (POST {platformId}/Logo)
+                return Ok(new { Message = "Platform created Successfully.", PlatformId = newPlatformId });
             }
             else
             {
                 return BadRequest(new { Message = "Failed to create platform." });
+            }
+        }
+
+        // Upload logo (file al posto dell'URL)
+        [Authorize(Roles = "Admin")]
+        [HttpPost("{platformId}/Logo")]
+        [RequestSizeLimit(5_000_000)]
+        public async Task<IActionResult> UploadLogo(Guid platformId, IFormFile file)
+        {
+            try
+            {
+                var url = await _platformService.UpdateLogoAsync(platformId, file);
+                if (url == null)
+                    return NotFound(new { Message = "Piattaforma non trovata o salvataggio fallito." });
+
+                return Ok(new { LogoUrl = url });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
             }
         }
 

@@ -1,13 +1,57 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using Rolayther.Data;
+using Rolayther.Helpers;
 using Rolayther.Models.DTOs.Request;
 using Rolayther.Models.Entities;
+using Rolayther.Models.Enums;
 
 namespace Rolayther.Services
 {
     public class PlayerService : ServiceBase
     {
-        public PlayerService(ApplicationDbContext applicationDbContext) : base(applicationDbContext) { }
+        private readonly IFileStorageService _fileStorage;
+
+        public PlayerService(ApplicationDbContext applicationDbContext, IFileStorageService fileStorage) : base(applicationDbContext)
+        {
+            _fileStorage = fileStorage;
+        }
+
+        // Carica un nuovo avatar per il Player, sostituendo quello precedente se era un nostro file
+        public async Task<string?> UpdateAvatarAsync(Guid playerId, IFormFile file)
+        {
+            var validationError = FileValidationHelper.ValidateImage(file);
+            if (validationError != null)
+                throw new InvalidOperationException(validationError);
+
+            var player = await _context.Players.FirstOrDefaultAsync(p => p.PlayerId == playerId);
+            if (player == null)
+                return null;
+
+            var oldKey = ExtractStorageKeyIfLocal(player.AvatarImgUrl);
+
+            var storageKey = await _fileStorage.SaveAsync(file, "avatars", StorageVisibility.Public);
+            var publicUrl = _fileStorage.GetPublicUrl(storageKey);
+
+            player.AvatarImgUrl = publicUrl;
+            _context.Players.Update(player);
+
+            var saved = await SaveAsync();
+            if (saved && oldKey != null)
+                _fileStorage.Delete(oldKey, StorageVisibility.Public);
+
+            return saved ? publicUrl : null;
+        }
+
+        private static string? ExtractStorageKeyIfLocal(string? imgUrl)
+        {
+            if (string.IsNullOrWhiteSpace(imgUrl))
+                return null;
+
+            var marker = "/uploads/";
+            var idx = imgUrl.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+            return idx < 0 ? null : imgUrl[(idx + marker.Length)..];
+        }
 
         // List Players
 
@@ -31,7 +75,7 @@ namespace Rolayther.Services
         }
 
         // Create Player
-        public async Task<bool> CreatePlayer(PlayerRequestDto playerRequestDto)
+        public async Task<Guid?> CreatePlayer(PlayerRequestDto playerRequestDto)
         {
             var newPlayer = new Player
             {
@@ -46,7 +90,7 @@ namespace Rolayther.Services
                 CreatedAt = DateTime.UtcNow
             };
             _context.Players.Add(newPlayer);
-            return await SaveAsync();
+            return await SaveAsync() ? newPlayer.PlayerId : null;
         }
 
         // Get player
@@ -87,11 +131,13 @@ namespace Rolayther.Services
                     ScheduledAt = s.ScheduledAt,
                     Duration = s.Duration,
                     NumbOfPlayer = s.NumbOfPlayer,
+                    SessionLink = s.SessionLink,
                     CoverImgUrl = s.CoverImgUrl,
                     Master = s.Master,
                     Game = s.Game,
                     Genre = s.Genre,
-                    Players = s.Players
+                    Players = s.Players,
+                    CurrentState = s.CurrentState
                 })
                 .ToListAsync();
         }

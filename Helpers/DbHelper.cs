@@ -19,7 +19,7 @@ namespace Rolayther.Helpers
 
                 await RunMigrationAsync<T>(services);
                 await SeedRoles(services);
-                await SeedAdmin(services);
+                await SeedAdmin(services, app.Configuration);
             }
             catch
             {
@@ -126,7 +126,7 @@ namespace Rolayther.Helpers
         }
         //metodo seeding admin
 
-        private static async Task SeedAdmin(IServiceProvider services)
+        private static async Task SeedAdmin(IServiceProvider services, IConfiguration configuration)
         {
             try
             {
@@ -134,7 +134,18 @@ namespace Rolayther.Helpers
 
                 UserManager<ApplicationUser> userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
 
-                ApplicationUser? existingSuperAdmin = await userManager.FindByEmailAsync(StringConstants.AdminEmail);
+                // Email e password dell'Admin NON sono più hardcoded: vanno messe nei User Secrets
+                // in locale (chiavi Admin:Email e Admin:Password) e nelle variabili d'ambiente in produzione.
+                string? adminEmail = configuration["Admin:Email"];
+                string? adminPassword = configuration["Admin:Password"];
+
+                if (string.IsNullOrWhiteSpace(adminEmail) || string.IsNullOrWhiteSpace(adminPassword))
+                {
+                    throw new DbInizializationException(
+                        "Credenziali Admin non configurate: aggiungi Admin:Email e Admin:Password ai User Secrets (o alle variabili d'ambiente in produzione).");
+                }
+
+                ApplicationUser? existingSuperAdmin = await userManager.FindByEmailAsync(adminEmail);
 
                 if (existingSuperAdmin == null)
                 {
@@ -142,16 +153,16 @@ namespace Rolayther.Helpers
                     {
                         Name = "Admin",
                         Surname = "Rolayther",
-                        Email = StringConstants.AdminEmail,
-                        UserName = "AdminRolayther",
+                        Email = adminEmail,
+                        UserName = adminEmail,
                         IsDeleted = false,
                     };
-                    //password di default
-                    IdentityResult userCreated = await userManager.CreateAsync(Admin, "Rolayther26!");
+                    IdentityResult userCreated = await userManager.CreateAsync(Admin, adminPassword);
 
                     if (!userCreated.Succeeded)
                     {
-                        throw new DbInizializationException("Errore durante la creazione dell'utente Admin");
+                        string details = string.Join("; ", userCreated.Errors.Select(e => $"{e.Code}: {e.Description}"));
+                        throw new DbInizializationException($"Errore durante la creazione dell'utente Admin - {details}");
                     }
 
                     IdentityResult roleAssigned = await userManager.AddToRoleAsync(Admin, StringConstants.AdminRole);

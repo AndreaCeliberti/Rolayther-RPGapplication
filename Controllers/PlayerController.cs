@@ -1,5 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Rolayther.Helpers;
 using Rolayther.Models.DTOs.Request;
 using Rolayther.Services;
 using System.Security.Claims;
@@ -11,16 +13,19 @@ namespace Rolayther.Controllers
     public class PlayerController : ControllerBase
     {
         private readonly PlayerService _playerService;
+        private readonly ResourceAccessService _access;
 
-        public PlayerController(PlayerService playerService)
+        public PlayerController(PlayerService playerService, ResourceAccessService access)
         {
             _playerService = playerService;
+            _access = access;
         }
 
         // Get all players
+        // Solo Admin: la lista contiene nome, cognome, email e data di nascita di TUTTI i giocatori,
+        // e l'unico che la usa è la dashboard Admin.
 
-        
-        [Authorize(Roles = "Admin,Master")]
+        [Authorize(Roles = "Admin")]
         [HttpGet("GetAllPlayers")]
         public async Task<IActionResult> GetAllPlayers()
         {
@@ -32,9 +37,10 @@ namespace Rolayther.Controllers
             return Ok(players);
         }
 
-        // Create a new player
+        // Create a new player (solo Admin: la registrazione pubblica passa da /Auth/register-player,
+        // questo endpoint crea una riga Player senza account Identity e non deve essere aperto a tutti)
 
-        [AllowAnonymous]
+        [Authorize(Roles = "Admin")]
         [HttpPost("CreatePlayer")]
         public async Task<IActionResult> CreatePlayer([FromBody]PlayerRequestDto playerRequestDto)
         {
@@ -45,10 +51,10 @@ namespace Rolayther.Controllers
 
             try
             {
-                var isCreated = await _playerService.CreatePlayer(playerRequestDto);
+                var newPlayerId = await _playerService.CreatePlayer(playerRequestDto);
 
-                return isCreated
-                    ? Ok(new { Message = "Player created Successfully." })
+                return newPlayerId != null
+                    ? Ok(new { Message = "Player created Successfully.", PlayerId = newPlayerId })
                     : BadRequest(new { Message = "Failed to create Player." });
             }
             catch (Exception ex)
@@ -71,7 +77,12 @@ namespace Rolayther.Controllers
             if (player == null)
                 return NotFound(new { Message = "Player not found." });
 
-            return Ok(player);
+            // Admin e il Player stesso: record completo (serve ai form di modifica).
+            // Chiunque altro (altri Player, Master): solo nickname e avatar.
+            if (await _access.CanManagePlayer(User, playerId))
+                return Ok(player);
+
+            return Ok(player.ToPublic());
         }
 
         // Get current player's profile
@@ -92,7 +103,9 @@ namespace Rolayther.Controllers
             {
                 playerId = player.PlayerId,
                 nickName = player.NickName,
-                email = player.Email
+                email = player.Email,
+                avatarImgUrl = player.AvatarImgUrl,
+                bioPlayer = player.BioPlayer
             });
         }
 
@@ -102,12 +115,18 @@ namespace Rolayther.Controllers
         [HttpGet("{playerId}/Sessions")]
         public async Task<IActionResult> GetPlayerSessions(Guid playerId)
         {
+            // Lo storico delle sessioni a cui partecipa un giocatore è privato: solo Admin e il Player stesso
+            if (!await _access.CanManagePlayer(User, playerId))
+                return StatusCode(StatusCodes.Status403Forbidden, new { Message = "Puoi vedere solo le tue sessioni." });
+
             var sessions = await _playerService.GetSessionsByPlayerId(playerId);
 
             if (sessions == null)
                 return NotFound(new { Message = "Player not found." });
 
-            return Ok(sessions);
+            // Il Player è iscritto a tutte queste sessioni, quindi vede il link; degli altri partecipanti solo nickname e avatar
+            var viewer = ViewerContext.From(User);
+            return Ok(sessions.Select(s => s.ToPublic(viewer)).ToList());
         }
 
 
@@ -120,12 +139,40 @@ namespace Rolayther.Controllers
             if (!ModelState.IsValid)
                 return BadRequest("Invalid player data.");
 
+            // Admin sempre; il Player solo sul PROPRIO profilo
+            if (!await _access.CanManagePlayer(User, playerId))
+                return StatusCode(StatusCodes.Status403Forbidden, new { Message = "Puoi modificare solo il tuo profilo." });
+
             var isUpdated = await _playerService.UpdatePlayer(playerId, dto);
 
             if (isUpdated)
                 return Ok(new { Message = "Player updated successfully." });
 
             return NotFound(new { Message = "Player not found or update failed." });
+        }
+
+        // Upload avatar (file al posto dell'URL)
+        [Authorize(Roles = "Admin, Player")]
+        [HttpPost("{playerId}/Avatar")]
+        [RequestSizeLimit(5_000_000)]
+        public async Task<IActionResult> UploadAvatar(Guid playerId, IFormFile file)
+        {
+            // Admin sempre; il Player solo sul PROPRIO profilo
+            if (!await _access.CanManagePlayer(User, playerId))
+                return StatusCode(StatusCodes.Status403Forbidden, new { Message = "Puoi cambiare solo il tuo avatar." });
+
+            try
+            {
+                var url = await _playerService.UpdateAvatarAsync(playerId, file);
+                if (url == null)
+                    return NotFound(new { Message = "Player non trovato o salvataggio fallito." });
+
+                return Ok(new { AvatarImgUrl = url });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
         }
 
 

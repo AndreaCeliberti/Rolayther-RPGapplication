@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Rolayther.Helpers;
 using Rolayther.Models.DTOs.Request;
 using Rolayther.Models.Entities;
 using Rolayther.Services;
@@ -14,10 +16,12 @@ namespace Rolayther.Controllers
     public class SessionController : ControllerBase
     {
         private readonly SessionService _sessionService;
+        private readonly ResourceAccessService _access;
 
-        public SessionController(SessionService sessionService)
+        public SessionController(SessionService sessionService, ResourceAccessService access)
         {
             _sessionService = sessionService;
+            _access = access;
         }
 
         // Get all sessions 
@@ -32,7 +36,15 @@ namespace Rolayther.Controllers
             {
                 return NotFound("No sessions found.");
             }
-            return Ok(sessions);
+
+            // Admin: risposta completa (la dashboard usa email e nomi dei player).
+            // Tutti gli altri, anche anonimi: solo dati pubblici (niente email, date di nascita, nomi reali;
+            // il link della sessione solo a chi è iscritto o la gestisce).
+            if (_access.IsAdmin(User))
+                return Ok(sessions);
+
+            var viewer = ViewerContext.From(User);
+            return Ok(sessions.Select(s => s.ToPublic(viewer)).ToList());
         }
 
         // Get session by id
@@ -45,7 +57,11 @@ namespace Rolayther.Controllers
             {
                 return NotFound("Session not found.");
             }
-            return Ok(session);
+
+            if (_access.IsAdmin(User))
+                return Ok(session);
+
+            return Ok(session.ToPublic(ViewerContext.From(User)));
         }
 
 
@@ -59,10 +75,15 @@ namespace Rolayther.Controllers
             {
                 return BadRequest("Invalid session data.");
             }
-            var isCreated = await _sessionService.CreateSession(sessionRequestDto);
-            if (isCreated)
+            // L'Admin può creare per qualsiasi Master; un Master solo a proprio nome
+            if (!await _access.CanManageMaster(User, sessionRequestDto.MasterId))
+                return StatusCode(StatusCodes.Status403Forbidden, new { Message = "Puoi creare sessioni solo a tuo nome." });
+
+            var newSessionId = await _sessionService.CreateSession(sessionRequestDto);
+            if (newSessionId != null)
             {
-                return Ok(new { Message = "Session created Successfully." });
+                // SessionId serve al frontend per caricare subito la cover (POST {sessionId}/Cover)
+                return Ok(new { Message = "Session created Successfully.", SessionId = newSessionId });
             }
             else
             {
@@ -72,12 +93,24 @@ namespace Rolayther.Controllers
 
         // Update a session
 
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin, Master")]
         [HttpPut("UpdateSession/{sessionId}")]
         public async Task<IActionResult> UpdateSession(Guid sessionId, [FromBody] SessionRequestDto dto)
         {
             if (!ModelState.IsValid)
                 return BadRequest("Invalid session data.");
+
+            // Admin sempre; il Master solo sulla PROPRIA sessione
+            if (!await _access.CanManageSession(User, sessionId))
+                return StatusCode(StatusCodes.Status403Forbidden, new { Message = "Puoi modificare solo le tue sessioni." });
+
+            // Solo l'Admin può assegnare la sessione a un altro Master
+            if (!_access.IsAdmin(User))
+            {
+                var currentMasterId = await _sessionService.GetSessionMasterId(sessionId);
+                if (currentMasterId != dto.MasterId)
+                    return StatusCode(StatusCodes.Status403Forbidden, new { Message = "Solo l'Admin può assegnare la sessione a un altro Master." });
+            }
 
             var ok = await _sessionService.UpdateSession(sessionId, dto);
             if (!ok) return NotFound(new { Message = "Session not found or update failed." });
@@ -85,9 +118,34 @@ namespace Rolayther.Controllers
             return Ok(new { Message = "Session updated successfully." });
         }
 
+        // Upload cover (file al posto dell'URL)
+        [Authorize(Roles = "Admin, Master")]
+        [HttpPost("{sessionId}/Cover")]
+        [RequestSizeLimit(5_000_000)]
+        public async Task<IActionResult> UploadCover(Guid sessionId, IFormFile file)
+        {
+            // Admin sempre; il Master solo sulla PROPRIA sessione
+            if (!await _access.CanManageSession(User, sessionId))
+                return StatusCode(StatusCodes.Status403Forbidden, new { Message = "Puoi cambiare la cover solo delle tue sessioni." });
+
+            try
+            {
+                var url = await _sessionService.UpdateCoverAsync(sessionId, file);
+                if (url == null)
+                    return NotFound(new { Message = "Sessione non trovata o salvataggio fallito." });
+
+                return Ok(new { CoverImgUrl = url });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+        }
+
 
         // Change session state
 
+        [Authorize(Roles = "Admin, Master")]
         [HttpPatch("{sessionId}/ChangeState")]
         public async Task<IActionResult> ChangeState(Guid sessionId, [FromBody] ChangeSessionStateDto dto)
         {
@@ -96,6 +154,10 @@ namespace Rolayther.Controllers
 
             if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(role))
                 return Unauthorized();
+
+            // Admin sempre; il Master solo sulla PROPRIA sessione
+            if (!await _access.CanManageSession(User, sessionId))
+                return StatusCode(StatusCodes.Status403Forbidden, new { Message = "Puoi cambiare lo stato solo delle tue sessioni." });
 
             await _sessionService.ChangeSessionState(sessionId, dto.NewState, userId, role, dto.Reason);
 
@@ -118,6 +180,10 @@ namespace Rolayther.Controllers
 
                 if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(role))
                     return Unauthorized();
+
+                // Admin sempre; un Player può iscrivere solo SE STESSO
+                if (!await _access.CanManagePlayer(User, playerId))
+                    return StatusCode(StatusCodes.Status403Forbidden, new { message = "Puoi iscrivere solo te stesso." });
 
                 var ok = await _sessionService.AddPlayerToSession(sessionId, playerId, userId, role);
                 if (!ok) return NotFound(new { message = "Session o player non trovati" });
@@ -155,6 +221,10 @@ namespace Rolayther.Controllers
         if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(role))
             return Unauthorized();
 
+        // Admin sempre; un Player può far uscire dalla sessione solo SE STESSO
+        if (!await _access.CanManagePlayer(User, playerId))
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = "Puoi uscire solo tu dalla sessione." });
+
         try
         {
             var result = await _sessionService.RemovePlayerFromSession(sessionId, playerId, userId, role);
@@ -185,6 +255,10 @@ namespace Rolayther.Controllers
         [HttpDelete("DeleteSession/{sessionId}")]
         public async Task<IActionResult> DeleteSession(Guid sessionId)
         {
+            // Admin sempre; il Master solo sulla PROPRIA sessione
+            if (!await _access.CanManageSession(User, sessionId))
+                return StatusCode(StatusCodes.Status403Forbidden, new { Message = "Puoi eliminare solo le tue sessioni." });
+
             var isDeleted = await _sessionService.DeleteSession(sessionId);
             if (isDeleted)
             {

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -11,6 +12,7 @@ using Rolayther.Services;
 using Serilog;
 using System.Text;
 using System.Text.Json.Serialization;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -34,6 +36,9 @@ Log.Logger = new LoggerConfiguration()
 builder.Host.UseSerilog();
 
 Log.Information("Registering services...");
+
+try
+{
 
 // Add services to the container.
 
@@ -114,6 +119,33 @@ builder.Services.AddScoped<SessionService>();
 builder.Services.AddScoped<MasterGamesService>();
 builder.Services.AddScoped<MasterPlatformsService>();
 
+// Servizio email: per ora logga soltanto (vedi ConsoleEmailService), da sostituire con Brevo
+builder.Services.AddScoped<IEmailService, ConsoleEmailService>();
+
+// Storage file: implementazione locale su disco (dev). Da sostituire con una versione Supabase Storage prima del deploy.
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<IFileStorageService, LocalDiskFileStorageService>();
+builder.Services.AddScoped<SessionResourceService>();
+
+// Controlli di proprietà (chi può modificare/eliminare cosa): Admin sempre, altrimenti solo il proprietario
+builder.Services.AddScoped<ResourceAccessService>();
+
+// Rate limiting sugli endpoint di autenticazione: max 10 richieste al minuto per IP
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    options.AddPolicy("AuthPolicy", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            }));
+});
+
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 // Configurazione di Swagger per la documentazione delle API e l'autenticazione JWT
@@ -176,7 +208,11 @@ if (app.Environment.IsDevelopment())
 
 //app.UseHttpsRedirection();
 
+app.UseStaticFiles(); // serve wwwroot/uploads (avatar, cover) — i file privati NON passano da qui
+
 app.UseCors("AllowFrontend");
+
+app.UseRateLimiter();
 
 app.UseAuthentication();
 
@@ -189,3 +225,13 @@ app.MapControllers();
 Log.Information("Running application...");
 
 app.Run();
+
+}
+catch (Exception ex)
+{
+    // Rete di sicurezza: stampa tipo, messaggio e stack trace completo di QUALSIASI eccezione
+    // non gestita durante l'avvio o l'esecuzione, invece di lasciar morire il processo in silenzio.
+    Log.Fatal(ex, "Errore fatale non gestito durante l'avvio o l'esecuzione dell'applicazione");
+    await Log.CloseAndFlushAsync();
+    Environment.Exit(1);
+}
