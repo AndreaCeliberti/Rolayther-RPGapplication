@@ -2,6 +2,7 @@ import { useContext, useEffect, useState } from "react";
 import { Container, Row, Col, Card, Spinner, Badge, ListGroup } from "react-bootstrap";
 import PageHeader from "../components/common/PageHeader";
 import EmptyState from "../components/common/EmptyState";
+import ImageUploadButton from "../components/common/ImageUploadButton";
 import { ToastContext } from "../context/ToastContext";
 import { PlayersApi } from "../api/players.api";
 
@@ -81,6 +82,19 @@ export default function PlayerProfile() {
                       <div className="fw-semibold fs-5">{me.nickName || "Player"}</div>
                       <Badge bg="success">Player</Badge>
                     </div>
+                  </div>
+
+                  <div className="mt-3">
+                    <ImageUploadButton
+                      label={me.avatarImgUrl ? "Cambia foto" : "Aggiungi foto"}
+                      maxDimension={512}
+                      successMessage="Foto profilo aggiornata ✅"
+                      onUpload={async (file) => {
+                        const res = await PlayersApi.uploadAvatar(me.playerId, file);
+                        const url = res.data?.avatarImgUrl;
+                        if (url) setMe((m) => ({ ...m, avatarImgUrl: url }));
+                      }}
+                    />
                   </div>
 
                   {me.bioPlayer && <div className="text-muted mt-3 small">{me.bioPlayer}</div>}

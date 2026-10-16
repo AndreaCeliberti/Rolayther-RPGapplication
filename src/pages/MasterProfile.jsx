@@ -11,8 +11,11 @@ import {
 
 import PageHeader from "../components/common/PageHeader";
 import EmptyState from "../components/common/EmptyState";
+import ImageUploadButton from "../components/common/ImageUploadButton";
+import ImageThumb from "../components/common/ImageThumb";
 import { ToastContext } from "../context/ToastContext";
 import { MastersApi } from "../api/masters.api";
+import { SessionsApi } from "../api/sessions.api";
 import SessionStateControl from "../components/SessionStateControl";
 import { stateBadgeVariant, stateLabel } from "../utils/sessionState";
 
@@ -114,6 +117,19 @@ export default function MasterProfile() {
                     </div>
                   </div>
 
+                  <div className="mt-3">
+                    <ImageUploadButton
+                      label={me.avatarImgUrl ? "Cambia foto" : "Aggiungi foto"}
+                      maxDimension={512}
+                      successMessage="Foto profilo aggiornata ✅"
+                      onUpload={async (file) => {
+                        const res = await MastersApi.uploadAvatar(me.masterId, file);
+                        const url = res.data?.avatarImgUrl;
+                        if (url) setMe((m) => ({ ...m, avatarImgUrl: url }));
+                      }}
+                    />
+                  </div>
+
                   {me.bioMaster && (
                     <div className="text-muted mt-3 small">{me.bioMaster}</div>
                   )}
@@ -191,31 +207,53 @@ export default function MasterProfile() {
                         .map((s) => (
                           <ListGroup.Item key={s.sessionId} className="px-0 rol-item ">
                             <div className="d-flex justify-content-between align-items-start gap-2">
-                              <div>
-                                <div className="fw-semibold">
-                                  {s.sessionTitle}
-                                </div>
-
-                                <div className="text-muted small">
-                                  {s.scheduledAt
-                                    ? new Date(s.scheduledAt).toLocaleString()
-                                    : "—"}{" "}
-                                  • {s.duration}
-                                </div>
-
-                                <div className="text-muted small">
-                                  {s.game?.title ? `🎮 ${s.game.title} · ` : ""}
-                                  {s.genre?.name ? `🏷️ ${s.genre.name}` : ""}
-                                </div>
-
-                                {s.sessionDescription && (
-                                  <div className="text-muted small mt-1">
-                                    {String(s.sessionDescription).slice(0, 110)}
-                                    {String(s.sessionDescription).length > 110
-                                      ? "…"
-                                      : ""}
+                              <div className="d-flex gap-3" style={{ minWidth: 0 }}>
+                                <ImageThumb url={s.coverImgUrl} width={84} height={56} radius={10} />
+                                <div style={{ minWidth: 0 }}>
+                                  <div className="fw-semibold">
+                                    {s.sessionTitle}
                                   </div>
-                                )}
+
+                                  <div className="text-muted small">
+                                    {s.scheduledAt
+                                      ? new Date(s.scheduledAt).toLocaleString()
+                                      : "—"}{" "}
+                                    • {s.duration}
+                                  </div>
+
+                                  <div className="text-muted small">
+                                    {s.game?.title ? `🎮 ${s.game.title} · ` : ""}
+                                    {s.genre?.name ? `🏷️ ${s.genre.name}` : ""}
+                                  </div>
+
+                                  {s.sessionDescription && (
+                                    <div className="text-muted small mt-1">
+                                      {String(s.sessionDescription).slice(0, 110)}
+                                      {String(s.sessionDescription).length > 110
+                                        ? "…"
+                                        : ""}
+                                    </div>
+                                  )}
+
+                                  <div className="mt-2">
+                                    <ImageUploadButton
+                                      label={s.coverImgUrl ? "Cambia cover" : "Aggiungi cover"}
+                                      maxDimension={1600}
+                                      successMessage="Cover aggiornata ✅"
+                                      onUpload={async (file) => {
+                                        const res = await SessionsApi.uploadCover(s.sessionId, file);
+                                        const url = res.data?.coverImgUrl;
+                                        if (url) {
+                                          setSessions((list) =>
+                                            list.map((x) =>
+                                              x.sessionId === s.sessionId ? { ...x, coverImgUrl: url } : x
+                                            )
+                                          );
+                                        }
+                                      }}
+                                    />
+                                  </div>
+                                </div>
                               </div>
 
                               <div className="text-end">

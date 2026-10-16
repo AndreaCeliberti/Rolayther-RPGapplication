@@ -7,6 +7,8 @@ import { SessionsApi } from "../../api/sessions.api";
 import { GamesApi } from "../../api/games.api";
 import { GenresApi } from "../../api/genres.api";
 import { MastersApi } from "../../api/masters.api";
+import ImageUploadField from "../common/ImageUploadField";
+import { uploadAfterSave } from "../../utils/apiError";
 
 const initial = {
   sessionTitle: "",
@@ -14,7 +16,6 @@ const initial = {
   scheduledAt: "",
   duration: "",
   numbOfPlayer: 4,
-  coverImgUrl: "",
   masterId: "",
   gameId: "",
   genreId: "",
@@ -28,6 +29,7 @@ export default function CreateSessionModal({ show, handleClose, onCreated }) {
   const [form, setForm] = useState(initial);
   const [validated, setValidated] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [coverFile, setCoverFile] = useState(null);
 
   const [loadingRefs, setLoadingRefs] = useState(false);
   const [games, setGames] = useState([]);
@@ -43,6 +45,7 @@ export default function CreateSessionModal({ show, handleClose, onCreated }) {
     setForm(initial);
     setValidated(false);
     setSaving(false);
+    setCoverFile(null);
     setMeMaster(null);
     handleClose();
   };
@@ -127,16 +130,27 @@ export default function CreateSessionModal({ show, handleClose, onCreated }) {
         scheduledAt: form.scheduledAt,
         duration: form.duration.trim(),
         numbOfPlayer: Number(form.numbOfPlayer),
-        coverImgUrl: form.coverImgUrl?.trim() ? form.coverImgUrl.trim() : null,
         masterId: form.masterId,
         gameId: form.gameId,
         genreId: form.genreId,
         sessionLink: form.sessionLink?.trim() ? form.sessionLink.trim() : null,
       };
 
-      await SessionsApi.create(payload);
+      const res = await SessionsApi.create(payload);
 
-      showToast("Sessione creata con successo ✅", "success");
+      // La cover si carica subito dopo la creazione (serve l'id della nuova sessione).
+      // Se il caricamento fallisce la sessione resta creata: la cover si può aggiungere in seguito.
+      const newSessionId = res?.data?.sessionId ?? res?.data?.SessionId;
+      const coverProblem = await uploadAfterSave(coverFile, newSessionId, SessionsApi.uploadCover);
+
+      if (coverProblem) {
+        showToast(
+          `Sessione creata, ma la cover non è stata caricata (${coverProblem}). Puoi aggiungerla in seguito.`,
+          "warning"
+        );
+      } else {
+        showToast("Sessione creata con successo ✅", "success");
+      }
       closeAndReset();
       onCreated?.();
     } catch (err) {
@@ -271,15 +285,13 @@ export default function CreateSessionModal({ show, handleClose, onCreated }) {
               </Col>
 
               <Col xs={12}>
-                <Form.Group>
-                  <Form.Label>Cover URL</Form.Label>
-                  <Form.Control
-                    name="coverImgUrl"
-                    value={form.coverImgUrl}
-                    onChange={onChange}
-                    placeholder="https://..."
-                  />
-                </Form.Group>
+                <ImageUploadField
+                  label="Cover della sessione"
+                  maxDimension={1600}
+                  file={coverFile}
+                  onChange={setCoverFile}
+                  disabled={saving}
+                />
               </Col>
 
               <Col xs={12} md={4}>

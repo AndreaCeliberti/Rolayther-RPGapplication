@@ -3,12 +3,12 @@ import { Modal, Button, Form, Spinner } from "react-bootstrap";
 import { ToastContext } from "../../context/ToastContext";
 import { AuthContext } from "../../context/AuthContext";
 import { PlatformsApi } from "../../api/platforms.api";
+import ImageUploadField from "../common/ImageUploadField";
+import { uploadAfterSave } from "../../utils/apiError";
 
 const initial = {
   name: "",
   description: "",
-  logoUrl: "",
-  masterId: "",
 };
 
 export default function CreatePlatformModal({ show, handleClose, onCreated }) {
@@ -20,17 +20,19 @@ export default function CreatePlatformModal({ show, handleClose, onCreated }) {
   const [form, setForm] = useState(initial);
   const [validated, setValidated] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [logoFile, setLogoFile] = useState(null);
 
   useEffect(() => {
     if (!show) {
       setForm(initial);
       setValidated(false);
       setSaving(false);
+      setLogoFile(null);
     }
   }, [show]);
 
   const canSubmit = useMemo(() => {
-    return isAdmin && form.name.trim() && form.masterId.trim();
+    return Boolean(isAdmin && form.name.trim());
   }, [isAdmin, form]);
 
   const onChange = (e) => {
@@ -42,6 +44,7 @@ export default function CreatePlatformModal({ show, handleClose, onCreated }) {
     setForm(initial);
     setValidated(false);
     setSaving(false);
+    setLogoFile(null);
     handleClose();
   };
 
@@ -62,14 +65,23 @@ export default function CreatePlatformModal({ show, handleClose, onCreated }) {
 
     setSaving(true);
     try {
-      await PlatformsApi.create({
+      const res = await PlatformsApi.create({
         name: form.name.trim(),
         description: form.description?.trim() ? form.description.trim() : null,
-        logoUrl: form.logoUrl?.trim() ? form.logoUrl.trim() : null,
-        masterId: form.masterId.trim(),
       });
 
-      showToast("Piattaforma creata", "success");
+      // Il logo (facoltativo) si carica subito dopo la creazione (serve l'id della nuova piattaforma).
+      const newPlatformId = res?.data?.platformId ?? res?.data?.PlatformId;
+      const logoProblem = await uploadAfterSave(logoFile, newPlatformId, PlatformsApi.uploadLogo);
+
+      if (logoProblem) {
+        showToast(
+          `Piattaforma creata, ma il logo non è stato caricato (${logoProblem}). Puoi aggiungerlo dalla tabella.`,
+          "warning"
+        );
+      } else {
+        showToast("Piattaforma creata ✅", "success");
+      }
       closeAndReset();
       onCreated?.();
     } catch (err) {
@@ -123,17 +135,15 @@ export default function CreatePlatformModal({ show, handleClose, onCreated }) {
               />
             </Form.Group>
 
-            <Form.Group className="mb-3">
-              <Form.Label>Logo URL</Form.Label>
-              <Form.Control
-                name="logoUrl"
-                value={form.logoUrl}
-                onChange={onChange}
-                placeholder="https://..."
+            <div className="mb-3">
+              <ImageUploadField
+                label="Logo"
+                maxDimension={512}
+                file={logoFile}
+                onChange={setLogoFile}
+                disabled={saving}
               />
-            </Form.Group>
-
-            
+            </div>
 
             <div className="d-flex justify-content-end gap-2">
               <Button variant="outline-secondary" onClick={closeAndReset}>

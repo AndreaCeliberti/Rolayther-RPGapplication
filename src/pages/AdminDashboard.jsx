@@ -16,6 +16,8 @@ import { ToastContext } from "../context/ToastContext";
 
 import PageHeader from "../components/common/PageHeader";
 import EmptyState from "../components/common/EmptyState";
+import ImageUploadButton from "../components/common/ImageUploadButton";
+import ImageThumb from "../components/common/ImageThumb";
 
 import { SessionsApi } from "../api/sessions.api";
 import { PlayersApi } from "../api/players.api";
@@ -206,6 +208,16 @@ export default function AdminDashboard() {
       setLoadingKey("platforms", false);
     }
     
+  };
+
+  // Carica una nuova immagine per un elemento del catalogo e aggiorna solo la sua riga
+  // (la risposta del server contiene il nuovo URL sotto la chiave indicata da urlKey)
+  const changeCatalogImage = async (uploadFn, id, file, { setList, idKey, urlKey }) => {
+    const res = await uploadFn(id, file);
+    const url = res?.data?.[urlKey];
+    if (url) {
+      setList((list) => list.map((x) => (x[idKey] === id ? { ...x, [urlKey]: url } : x)));
+    }
   };
 
   // primo load
@@ -692,7 +704,7 @@ const deleteBody = useMemo(() => {
               <Tab eventKey="games" title={`Games (${games.length})`}>
                 <div className="d-flex justify-content-between align-items-center mb-3 gap-2 flex-wrap">
                   <div className="text-muted small">
-                    Gestione giochi (crea/cancella).
+                    Gestione giochi (crea, cambia cover, cancella).
                   </div>
                   <div className="d-flex gap-2 flex-wrap">
                     <Button variant="outline-secondary" size="sm" onClick={loadGames}>
@@ -722,15 +734,33 @@ const deleteBody = useMemo(() => {
                       <tbody>
                         {games.map((g) => (
                           <tr key={g.gameId}>
-                            <td className="fw-semibold">{g.title}</td>
+                            <td className="fw-semibold">
+                              <div className="d-flex align-items-center gap-2">
+                                <ImageThumb url={g.coverImageUrl} />
+                                {g.title}
+                              </div>
+                            </td>
                             <td className="text-end">
-                              <Button
-                                size="sm"
-                                variant="outline-danger"
-                                onClick={() => openDelete("game", g)}
-                              >
-                                Cancella
-                              </Button>
+                              <div className="d-flex gap-2 justify-content-end flex-wrap">
+                                <ImageUploadButton
+                                  label={g.coverImageUrl ? "Cambia cover" : "Aggiungi cover"}
+                                  maxDimension={1600}
+                                  onUpload={(file) =>
+                                    changeCatalogImage(GamesApi.uploadCover, g.gameId, file, {
+                                      setList: setGames,
+                                      idKey: "gameId",
+                                      urlKey: "coverImageUrl",
+                                    })
+                                  }
+                                />
+                                <Button
+                                  size="sm"
+                                  variant="outline-danger"
+                                  onClick={() => openDelete("game", g)}
+                                >
+                                  Cancella
+                                </Button>
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -744,7 +774,7 @@ const deleteBody = useMemo(() => {
               <Tab eventKey="genres" title={`Genres (${genres.length})`}>
                 <div className="d-flex justify-content-between align-items-center mb-3 gap-2 flex-wrap">
                   <div className="text-muted small">
-                    Gestione generi (crea/cancella).
+                    Gestione generi (crea, cambia immagine, cancella).
                   </div>
                   <div className="d-flex gap-2 flex-wrap">
                     <Button
@@ -778,15 +808,33 @@ const deleteBody = useMemo(() => {
                       <tbody>
                         {genres.map((g) => (
                           <tr key={g.genreId}>
-                            <td className="fw-semibold">{g.name}</td>
+                            <td className="fw-semibold">
+                              <div className="d-flex align-items-center gap-2">
+                                <ImageThumb url={g.imageUrl} />
+                                {g.name}
+                              </div>
+                            </td>
                             <td className="text-end">
-                              <Button
-                                size="sm"
-                                variant="outline-danger"
-                                onClick={() => openDelete("genre", g)}
-                              >
-                                Cancella
-                              </Button>
+                              <div className="d-flex gap-2 justify-content-end flex-wrap">
+                                <ImageUploadButton
+                                  label={g.imageUrl ? "Cambia immagine" : "Aggiungi immagine"}
+                                  maxDimension={1600}
+                                  onUpload={(file) =>
+                                    changeCatalogImage(GenresApi.uploadImage, g.genreId, file, {
+                                      setList: setGenres,
+                                      idKey: "genreId",
+                                      urlKey: "imageUrl",
+                                    })
+                                  }
+                                />
+                                <Button
+                                  size="sm"
+                                  variant="outline-danger"
+                                  onClick={() => openDelete("genre", g)}
+                                >
+                                  Cancella
+                                </Button>
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -800,7 +848,7 @@ const deleteBody = useMemo(() => {
               <Tab eventKey="platforms" title={`Platforms (${platforms.length})`}>
                 <div className="d-flex justify-content-between align-items-center mb-3 gap-2 flex-wrap">
                   <div className="text-muted small">
-                    Gestione piattaforme (crea/cancella).
+                    Gestione piattaforme (crea, cambia logo, cancella).
                   </div>
                   <div className="d-flex gap-2 flex-wrap">
                     <Button
@@ -838,15 +886,33 @@ const deleteBody = useMemo(() => {
                       <tbody>
                         {platforms.map((p) => (
                           <tr key={p.platformId}>
-                            <td className="fw-semibold">{p.name}</td>
+                            <td className="fw-semibold">
+                              <div className="d-flex align-items-center gap-2">
+                                <ImageThumb url={p.logoUrl} />
+                                {p.name}
+                              </div>
+                            </td>
                             <td className="text-end">
-                              <Button
-                                size="sm"
-                                variant="outline-danger"
-                                onClick={() => openDelete("platform", p)}
-                              >
-                                Cancella
-                              </Button>
+                              <div className="d-flex gap-2 justify-content-end flex-wrap">
+                                <ImageUploadButton
+                                  label={p.logoUrl ? "Cambia logo" : "Aggiungi logo"}
+                                  maxDimension={512}
+                                  onUpload={(file) =>
+                                    changeCatalogImage(PlatformsApi.uploadLogo, p.platformId, file, {
+                                      setList: setPlatforms,
+                                      idKey: "platformId",
+                                      urlKey: "logoUrl",
+                                    })
+                                  }
+                                />
+                                <Button
+                                  size="sm"
+                                  variant="outline-danger"
+                                  onClick={() => openDelete("platform", p)}
+                                >
+                                  Cancella
+                                </Button>
+                              </div>
                             </td>
                           </tr>
                         ))}

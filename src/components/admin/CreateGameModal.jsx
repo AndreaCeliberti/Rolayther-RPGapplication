@@ -3,11 +3,12 @@ import { Modal, Button, Form, Spinner } from "react-bootstrap";
 import { ToastContext } from "../../context/ToastContext";
 import { AuthContext } from "../../context/AuthContext";
 import { GamesApi } from "../../api/games.api";
+import ImageUploadField from "../common/ImageUploadField";
+import { uploadAfterSave } from "../../utils/apiError";
 
 const initial = {
   title: "",
   description: "",
-  coverImageUrl: "",
 };
 
 export default function CreateGameModal({ show, handleClose, onCreated }) {
@@ -19,23 +20,21 @@ export default function CreateGameModal({ show, handleClose, onCreated }) {
   const [form, setForm] = useState(initial);
   const [validated, setValidated] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [coverFile, setCoverFile] = useState(null);
 
   useEffect(() => {
     if (!show) {
       setForm(initial);
       setValidated(false);
       setSaving(false);
+      setCoverFile(null);
     }
   }, [show]);
 
   const canSubmit = useMemo(() => {
-    return (
-      isAdmin &&
-      form.title.trim() &&
-      form.description.trim() &&
-      form.coverImageUrl.trim()
-    );
-  }, [isAdmin, form]);
+    // La cover è obbligatoria come prima (prima era un URL, ora è un file)
+    return Boolean(isAdmin && form.title.trim() && form.description.trim() && coverFile);
+  }, [isAdmin, form, coverFile]);
 
   const onChange = (e) => {
     const { name, value } = e.target;
@@ -46,6 +45,7 @@ export default function CreateGameModal({ show, handleClose, onCreated }) {
     setForm(initial);
     setValidated(false);
     setSaving(false);
+    setCoverFile(null);
     handleClose();
   };
 
@@ -66,13 +66,24 @@ export default function CreateGameModal({ show, handleClose, onCreated }) {
 
     setSaving(true);
     try {
-      await GamesApi.create({
+      const res = await GamesApi.create({
         title: form.title.trim(),
         description: form.description.trim(),
-        coverImageUrl: form.coverImageUrl.trim(),
       });
 
-      showToast("Gioco creato", "success");
+      // La cover si carica subito dopo la creazione (serve l'id del nuovo gioco).
+      // Se il caricamento fallisce il gioco resta creato: la cover si può aggiungere dalla tabella.
+      const newGameId = res?.data?.gameId ?? res?.data?.GameId;
+      const coverProblem = await uploadAfterSave(coverFile, newGameId, GamesApi.uploadCover);
+
+      if (coverProblem) {
+        showToast(
+          `Gioco creato, ma la cover non è stata caricata (${coverProblem}). Puoi aggiungerla dalla tabella.`,
+          "warning"
+        );
+      } else {
+        showToast("Gioco creato ✅", "success");
+      }
       closeAndReset();
       onCreated?.();
     } catch (err) {
@@ -128,19 +139,16 @@ export default function CreateGameModal({ show, handleClose, onCreated }) {
               </Form.Control.Feedback>
             </Form.Group>
 
-            <Form.Group className="mb-3">
-              <Form.Label>Cover Image URL *</Form.Label>
-              <Form.Control
-                name="coverImageUrl"
-                value={form.coverImageUrl}
-                onChange={onChange}
+            <div className="mb-3">
+              <ImageUploadField
+                label="Cover"
                 required
-                placeholder="https://..."
+                maxDimension={1600}
+                file={coverFile}
+                onChange={setCoverFile}
+                disabled={saving}
               />
-              <Form.Control.Feedback type="invalid">
-                Inserisci un URL.
-              </Form.Control.Feedback>
-            </Form.Group>
+            </div>
 
             <div className="d-flex justify-content-end gap-2">
               <Button variant="outline-secondary" onClick={closeAndReset}>
