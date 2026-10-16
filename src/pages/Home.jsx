@@ -1,120 +1,127 @@
-import { useContext, useEffect, useMemo, useState } from "react";
-import { Container, Row, Col, Button, Spinner } from "react-bootstrap";
-import { SessionsApi } from "../api/sessions.api";
-import SessionCard from "../components/cards/SessionCard";
+import { useContext, useMemo } from "react";
 import { AuthContext } from "../context/AuthContext";
-import { ToastContext } from "../context/ToastContext";
-import CreateSessionModal from "../components/admin/CreateSessionModal";
-import { apiErrorMessage } from "../utils/apiError";
+import { useHomeData } from "../hooks/useHomeData";
+import { useMemberInfo } from "../hooks/useMemberInfo";
+import { buildHomeView } from "../utils/homeSessions";
+import HomeHero from "../components/home/HomeHero";
+import Ornament from "../components/home/Ornament";
+import SessionAgenda from "../components/home/SessionAgenda";
+import HowItWorks from "../components/home/HowItWorks";
+import MastersRow from "../components/home/MastersRow";
+import GamesRow from "../components/home/GamesRow";
+import JoinBand from "../components/home/JoinBand";
+import "../styles/home.css";
 
-export default function Home() {
+const ALL_SESSIONS = { to: "/sessions", label: "Tutte le sessioni" };
+
+// Ciò che l'agenda principale dice (titolo, spiegazione, testo quando è vuota) cambia con chi guarda la pagina
+function agendaCopy({ role, hasMine }) {
+  if (role === "Player") {
+    return {
+      title: "Tavoli con posti liberi",
+      lead: "Scegli dove sederti: il disegno mostra quanti posti restano.",
+      empty: {
+        title: "Nessun tavolo con posti liberi al momento.",
+        text: "Appena un Master pubblica una nuova sessione la trovi qui.",
+      },
+    };
+  }
+  if (role === "Master" || role === "Admin") {
+    return {
+      title: hasMine ? "Gli altri tavoli" : "Le prossime sessioni",
+      lead: "Le sessioni in programma su Rolayther.",
+      empty: {
+        title: hasMine ? "Non ci sono altre sessioni in programma." : "Nessuna sessione in programma.",
+        text: "Quando ne verranno pubblicate, le trovi qui.",
+      },
+    };
+  }
+  return {
+    title: "Le prossime sessioni",
+    lead: "Ogni riga è un tavolo: il disegno mostra quanti posti restano.",
+    empty: {
+      title: "Nessuna sessione in programma.",
+      text: "Quando un Master ne pubblica una, la trovi qui.",
+    },
+  };
+}
+
+export default function Home({ openLogin, openRegisterPlayer, openRegisterMaster, openCreateSession }) {
   const { user } = useContext(AuthContext);
-  const { showToast } = useContext(ToastContext);
+  const { data, retry, waking } = useHomeData();
+  const member = useMemberInfo(user);
+  const view = useMemo(() => buildHomeView(data, user, member), [data, user, member]);
 
-  const [sessions, setSessions] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [showCreate, setShowCreate] = useState(false);
+  const role = user?.role ?? null;
+  const sessionsStatus = data.sessions.status;
 
-  const canCreate = useMemo(
-    () => user && (user.role === "Admin" || user.role === "Master"),
-    [user]
-  );
+  // "Quante sessioni ho" si sa solo quando sono arrivate le sessioni (e, per il Master, il suo id)
+  const waitingForMaster = role === "Master" && !member.ready;
+  const mineLoading = sessionsStatus === "loading" || waitingForMaster;
+  const mineKnown = sessionsStatus === "ready" && !waitingForMaster && (role !== "Master" || !!member.masterId);
+  const hasMine = view.mine.length > 0;
 
-  const loadSessions = async () => {
-    setLoading(true);
-    try {
-      const res = await SessionsApi.getAll();
-      setSessions(res.data || []);
-    } catch {
-      showToast("Errore nel caricamento sessioni", "danger");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const copy = agendaCopy({ role, hasMine });
+  const mineIds = new Set(view.mine.map((s) => s.id));
+  const mainSessions = role === "Player" ? view.openTables : view.upcoming.filter((s) => !mineIds.has(s.id));
 
-  useEffect(() => {
-    loadSessions();
-  }, []);
-
-  const handleJoin = async (sessionId) => {
-    if (!user) return showToast("Devi fare login per partecipare", "warning");
-    if (!user.playerId) return showToast("Serve un profilo Player per fare Join", "warning");
-
-    try {
-      await SessionsApi.join(sessionId, user.playerId);
-      showToast("Sei entrato nella sessione 🎉", "success");
-      await loadSessions();
-    } catch (err) {
-      // il server spiega il motivo (es. "devi prima confermare la tua email")
-      showToast(apiErrorMessage(err, "Impossibile entrare nella sessione"), "danger", 6000);
-    }
-  };
-
-  const handleLeave = async (sessionId) => {
-    if (!user?.playerId) return;
-
-    try {
-      await SessionsApi.leave(sessionId, user.playerId);
-      showToast("Hai lasciato la sessione", "success");
-      await loadSessions();
-    } catch {
-      showToast("Impossibile lasciare la sessione", "danger");
-    }
-  };
+  // Se la lista è vuota, a chi può aprire un tavolo si offre di farlo
+  let emptyAction = null;
+  if (!role) emptyAction = { label: "Sei un Master? Apri il primo tavolo", onClick: openRegisterMaster };
+  if (role === "Master") emptyAction = { label: "Crea una sessione", onClick: openCreateSession };
 
   return (
-    <Container fluid="md" className="mt-4 px-3 px-md-0">
-      <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
-        <div>
-          <h1 className="mb-1 text-center text-md-start">Benvenuto!</h1>
-          <p style={{ color: "var(--muted)" }} className=" text-center text-md-start mb-0">
-            Unisciti ai <strong>Rolayther</strong> e vivi un avventura!
-          </p>
-        </div>
+    <div className="home">
+      <HomeHero
+        role={role}
+        name={member.nickName}
+        status={sessionsStatus}
+        featured={view.featured}
+        featuredIsMine={view.featuredIsMine}
+        sessionsCount={view.upcoming.length}
+        hostCount={view.hostCount}
+        mineCount={mineKnown ? view.mine.length : null}
+        mineLoading={mineLoading}
+        pendingCount={member.pendingCount}
+        onRegisterPlayer={openRegisterPlayer}
+        onRegisterMaster={openRegisterMaster}
+        onCreateSession={openCreateSession}
+        onRetry={retry}
+      />
 
-        
-      </div>
+      <Ornament />
 
-      {loading ? (
-        <div className="text-center mt-5">
-          <Spinner animation="border" />
-        </div>
-      ) : (
-        <Row className="g-4 mt-3">
-          {sessions.map((s) => {
-            const players = s.players || [];
-            const playersCount = players.length;
-            const maxPlayers = s.numbOfPlayer ?? 0;
-            const isFull = maxPlayers > 0 && playersCount >= maxPlayers;
-
-            const isInSession =
-              user?.playerId &&
-              players.some((p) => p.playerId === user.playerId);
-
-            const canJoin = !!user?.playerId && !isInSession && !isFull;
-            const canLeave = !!user?.playerId && isInSession;
-
-            return (
-              <Col key={s.sessionId} xs={12} sm={6} lg={4} xl={3}>
-                <SessionCard
-                  session={s}
-                  isFull={isFull}
-                  canJoin={canJoin}
-                  canLeave={canLeave}
-                  onJoin={handleJoin}
-                  onLeave={handleLeave}
-                />
-              </Col>
-            );
-          })}
-        </Row>
+      {hasMine && (
+        <SessionAgenda
+          headingId="hm-mine-title"
+          title="Le tue sessioni"
+          lead={role === "Master" ? "I tavoli che dirigi." : "I tavoli in cui hai un posto."}
+          status="ready"
+          sessions={view.mine}
+          limit={6}
+        />
       )}
 
-      <CreateSessionModal
-        show={showCreate}
-        onHide={() => setShowCreate(false)}
-        onCreated={loadSessions}
+      <SessionAgenda
+        id="sessioni"
+        headingId="hm-agenda-title"
+        title={copy.title}
+        lead={copy.lead}
+        status={sessionsStatus}
+        sessions={mainSessions}
+        limit={6}
+        action={ALL_SESSIONS}
+        empty={{ ...copy.empty, action: emptyAction }}
+        waking={waking}
+        onRetry={retry}
       />
-    </Container>
+
+      {!role && <HowItWorks />}
+
+      <MastersRow masters={view.masters} />
+      <GamesRow games={view.games} genres={view.genres} />
+
+      {!role && <JoinBand onRegisterPlayer={openRegisterPlayer} onRegisterMaster={openRegisterMaster} onLogin={openLogin} />}
+    </div>
   );
 }
