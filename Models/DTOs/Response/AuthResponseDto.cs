@@ -9,5 +9,8 @@
         public string Role { get; set; } = string.Empty;
 
         public DateTime ExpiresAt { get; set; }
+
+        // false = l'utente non ha ancora cliccato il link di conferma ricevuto per email
+        public bool EmailConfirmed { get; set; }
     }
 }

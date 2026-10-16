@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Rolayther.Data;
@@ -9,6 +10,7 @@ using Rolayther.Exceptions;
 using Rolayther.Helpers;
 using Rolayther.Models.Entities;
 using Rolayther.Services;
+using Rolayther.Services.Mail;
 using Serilog;
 using System.Text;
 using System.Text.Json.Serialization;
@@ -119,8 +121,31 @@ builder.Services.AddScoped<SessionService>();
 builder.Services.AddScoped<MasterGamesService>();
 builder.Services.AddScoped<MasterPlatformsService>();
 
-// Servizio email: per ora logga soltanto (vedi ConsoleEmailService), da sostituire con Brevo
-builder.Services.AddScoped<IEmailService, ConsoleEmailService>();
+// ===== Email (conferma registrazione, approvazione Master, iscrizioni e creazione sessioni) =====
+// Impostazioni nella sezione "Email" di appsettings (vedi docs/EMAIL.md). Controllate all'avvio:
+// con Provider = "Brevo" senza chiave API l'applicazione non parte e dice cosa manca.
+builder.Services.AddSingleton<IValidateOptions<EmailOptions>, EmailOptionsValidator>();
+builder.Services.AddOptions<EmailOptions>()
+    .Bind(builder.Configuration.GetSection(EmailOptions.SectionName))
+    .ValidateOnStart();
+
+// Trasporto: "Brevo" = invio reale con l'API web di Brevo (su Render gratuito le porte SMTP sono bloccate);
+// "Console" (predefinito) = non spedisce nulla, salva ogni email come file HTML in App_Data/emails.
+var emailOptions = builder.Configuration.GetSection(EmailOptions.SectionName).Get<EmailOptions>() ?? new EmailOptions();
+if (emailOptions.IsBrevo)
+    builder.Services.AddHttpClient<IEmailService, BrevoEmailService>(client => client.Timeout = TimeSpan.FromSeconds(15));
+else
+    builder.Services.AddSingleton<IEmailService, ConsoleEmailService>();
+
+builder.Services.AddSingleton<EmailConfirmationTokenService>(); // link di conferma firmati (nessun dato nel database)
+builder.Services.AddSingleton<ResendThrottle>();                // antispam sul "reinvia conferma"
+builder.Services.AddScoped<EmailNotificationService>();         // sceglie il modello e spedisce
+
+// Le email delle sessioni (e il reinvio della conferma) partono in background, dopo la risposta all'utente
+builder.Services.AddSingleton<MailJobQueue>();
+builder.Services.AddSingleton<IMailJobQueue>(sp => sp.GetRequiredService<MailJobQueue>());
+builder.Services.AddScoped<IMailJobHandler, MailJobProcessor>();
+builder.Services.AddHostedService<MailJobWorker>();
 
 // Storage file: implementazione locale su disco (dev). Da sostituire con una versione Supabase Storage prima del deploy.
 builder.Services.AddHttpContextAccessor();
@@ -141,6 +166,17 @@ builder.Services.AddRateLimiter(options =>
             factory: _ => new FixedWindowRateLimiterOptions
             {
                 PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            }));
+
+    // Reinvio dell'email di conferma: limite più stretto (l'endpoint è pubblico e fa partire una email)
+    options.AddPolicy("ResendPolicy", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
                 Window = TimeSpan.FromMinutes(1),
                 QueueLimit = 0
             }));
@@ -178,6 +214,13 @@ builder.Services.AddSwaggerGen(option =>
 });
 
 var app = builder.Build();
+
+if (emailOptions.IsBrevo)
+    Log.Information("Email: invio reale con Brevo (mittente {From})", emailOptions.FromEmail);
+else if (app.Environment.IsDevelopment())
+    Log.Information("Email: modalità sviluppo, nessun invio reale. Le email vengono salvate in {Folder}", emailOptions.PreviewFolder);
+else
+    Log.Warning("Email: provider \"{Provider}\" in un ambiente non di sviluppo. Le email NON vengono spedite: imposta Email:Provider = Brevo (vedi docs/EMAIL.md)", emailOptions.Provider);
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

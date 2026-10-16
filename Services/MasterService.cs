@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Rolayther.Data;
 using Rolayther.Helpers;
 using Rolayther.Models.DTOs.Request;
+using Rolayther.Models.DTOs.Response;
 using Rolayther.Models.Entities;
 using Rolayther.Models.Entities.Bridges;
 using Rolayther.Models.Enums;
@@ -13,13 +14,13 @@ namespace Rolayther.Services
     public class MasterService : ServiceBase
     {
         private readonly UserManager<ApplicationUser> _userManager;
-        private readonly IEmailService _emailService;
+        private readonly EmailNotificationService _emailNotifications;
         private readonly IFileStorageService _fileStorage;
 
-        public MasterService(ApplicationDbContext applicationDbContext, UserManager<ApplicationUser> userManager, IEmailService emailService, IFileStorageService fileStorage) : base(applicationDbContext)
+        public MasterService(ApplicationDbContext applicationDbContext, UserManager<ApplicationUser> userManager, EmailNotificationService emailNotifications, IFileStorageService fileStorage) : base(applicationDbContext)
         {
             _userManager = userManager;
-            _emailService = emailService;
+            _emailNotifications = emailNotifications;
             _fileStorage = fileStorage;
         }
 
@@ -94,49 +95,50 @@ namespace Rolayther.Services
                 .ToListAsync();
         }
 
-        // Approva una richiesta: assegna il ruolo Identity "Master" e notifica via email
-        public async Task<bool> ApproveMaster(Guid masterId)
+        // Approva una richiesta: assegna il ruolo Identity "Master" e scrive al candidato (con l'eventuale messaggio dell'Admin)
+        public async Task<MasterDecisionResult> ApproveMaster(Guid masterId, string? message)
         {
             var master = await _context.Masters.FirstOrDefaultAsync(m => m.MasterId == masterId);
             if (master == null || master.Status != ApprovalStatus.Pending)
-                return false;
+                return MasterDecisionResult.Failed;
 
             var user = await _userManager.FindByEmailAsync(master.Email);
             if (user == null)
-                return false; // nessun account Identity collegato: non c'è nessuno a cui assegnare il ruolo
+                return MasterDecisionResult.Failed; // nessun account Identity collegato: non c'è nessuno a cui assegnare il ruolo
 
             if (!await _userManager.IsInRoleAsync(user, StringConstants.MasterRole))
             {
                 var roleResult = await _userManager.AddToRoleAsync(user, StringConstants.MasterRole);
                 if (!roleResult.Succeeded)
-                    return false;
+                    return MasterDecisionResult.Failed;
             }
 
             master.Status = ApprovalStatus.Approved;
             _context.Masters.Update(master);
             var saved = await SaveAsync();
+            if (!saved)
+                return MasterDecisionResult.Failed;
 
-            if (saved)
-                await _emailService.SendMasterApprovedEmailAsync(master.Email, master.Name);
-
-            return saved;
+            // La decisione è già salvata: se l'email non parte non si annulla nulla, si avvisa soltanto l'Admin
+            var emailSent = await _emailNotifications.SendMasterApprovedAsync(user, master.Name, message);
+            return new MasterDecisionResult(true, emailSent);
         }
 
-        // Rifiuta una richiesta (la riga resta in storico con Status = Rejected)
-        public async Task<bool> RejectMaster(Guid masterId, string? reason)
+        // Rifiuta una richiesta (la riga resta in storico con Status = Rejected). Il motivo viene inviato al candidato.
+        public async Task<MasterDecisionResult> RejectMaster(Guid masterId, string reason)
         {
             var master = await _context.Masters.FirstOrDefaultAsync(m => m.MasterId == masterId);
             if (master == null || master.Status != ApprovalStatus.Pending)
-                return false;
+                return MasterDecisionResult.Failed;
 
             master.Status = ApprovalStatus.Rejected;
             _context.Masters.Update(master);
             var saved = await SaveAsync();
+            if (!saved)
+                return MasterDecisionResult.Failed;
 
-            if (saved)
-                await _emailService.SendMasterRejectedEmailAsync(master.Email, master.Name, reason);
-
-            return saved;
+            var emailSent = await _emailNotifications.SendMasterRejectedAsync(master.Email, master.Name, reason);
+            return new MasterDecisionResult(true, emailSent);
         }
 
         // Create Master

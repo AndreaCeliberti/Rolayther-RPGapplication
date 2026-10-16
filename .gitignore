@@ -364,3 +364,5 @@ FodyWeavers.xsd
 # File caricati dagli utenti (avatar, cover, materiale privato delle sessioni): mai nel repository
 wwwroot/uploads/
 App_Data/private-uploads/
+# Anteprime HTML delle email generate in sviluppo (provider Console)
+App_Data/emails/

@@ -225,24 +225,45 @@ namespace Rolayther.Controllers
             return Ok(pending);
         }
 
+        // Approvazione. Corpo facoltativo: { message } = messaggio di benvenuto per il nuovo Master (finisce nell'email).
+        // La risposta include emailSent: false significa "approvato, ma l'email non è partita".
         [Authorize(Roles = "Admin")]
         [HttpPut("{masterId}/Approve")]
-        public async Task<IActionResult> ApproveMaster(Guid masterId)
+        public async Task<IActionResult> ApproveMaster(Guid masterId, [FromBody] MasterApprovalActionDto? dto)
         {
-            var approved = await _masterService.ApproveMaster(masterId);
-            return approved
-                ? Ok(new { Message = "Richiesta approvata: il ruolo Master è stato assegnato." })
-                : BadRequest(new { Message = "Richiesta non trovata, già gestita, o nessun account collegato." });
+            var result = await _masterService.ApproveMaster(masterId, dto?.Message);
+            if (!result.Success)
+                return BadRequest(new { Message = "Richiesta non trovata, già gestita, o nessun account collegato." });
+
+            return Ok(new
+            {
+                Message = result.EmailSent
+                    ? "Richiesta approvata: il ruolo Master è stato assegnato e l'email di benvenuto è partita."
+                    : "Richiesta approvata: il ruolo Master è stato assegnato, ma l'email di benvenuto NON è partita.",
+                EmailSent = result.EmailSent
+            });
         }
 
+        // Rifiuto. Il motivo è OBBLIGATORIO: viene spiegato al candidato nell'email.
         [Authorize(Roles = "Admin")]
         [HttpPut("{masterId}/Reject")]
         public async Task<IActionResult> RejectMaster(Guid masterId, [FromBody] MasterApprovalActionDto? dto)
         {
-            var rejected = await _masterService.RejectMaster(masterId, dto?.Reason);
-            return rejected
-                ? Ok(new { Message = "Richiesta rifiutata." })
-                : BadRequest(new { Message = "Richiesta non trovata o già gestita." });
+            var reason = dto?.Reason?.Trim();
+            if (string.IsNullOrEmpty(reason))
+                return BadRequest(new { Message = "Indica il motivo del rifiuto: verrà spiegato al candidato nell'email." });
+
+            var result = await _masterService.RejectMaster(masterId, reason);
+            if (!result.Success)
+                return BadRequest(new { Message = "Richiesta non trovata o già gestita." });
+
+            return Ok(new
+            {
+                Message = result.EmailSent
+                    ? "Richiesta rifiutata: il candidato è stato avvisato per email."
+                    : "Richiesta rifiutata, ma l'email al candidato NON è partita.",
+                EmailSent = result.EmailSent
+            });
         }
 
         // Delete a master
