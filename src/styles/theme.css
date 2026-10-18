@@ -122,23 +122,16 @@
   background: rgba(139,92,246,.14) !important;
 }
 
-/* Badges: keep bootstrap bg but ensure readability */
-.theme-dark .badge.bg-light {
-  background: rgba(255,255,255,.10) !important;
-  color: var(--text) !important;
-  border: 1px solid rgba(255,255,255,.10) !important;
-}
-
 /* Spinners */
 .theme-dark .spinner-border {
   color: var(--accent2) !important;
 }
 
-/* Links */
-.theme-dark a {
+/* Links (i pulsanti-link, `a.btn`, hanno il colore dato da ui-kit.css) */
+.theme-dark a:where(:not(.btn)) {
   color: rgba(167,120,255,.95);
 }
-.theme-dark a:hover {
+.theme-dark a:where(:not(.btn)):hover {
   color: rgba(195, 168, 255, 1);
 }
 
@@ -193,34 +186,6 @@
 
 .theme-dark .table .text-muted {
   color: rgba(255,255,255,.68) !important;
-}
-
-/* Buttons outline better on dark */
-.theme-dark .btn-outline-secondary,
-.theme-dark .btn-outline-primary,
-.theme-dark .btn-outline-danger {
-  border-color: rgba(255,255,255,.18) !important;
-  color: rgba(255,255,255,.86) !important;
-}
-
-.theme-dark .btn-outline-secondary:hover,
-.theme-dark .btn-outline-primary:hover,
-.theme-dark .btn-outline-danger:hover {
-  background: rgba(255,255,255,.06) !important;
-  border-color: rgba(167,120,255,.30) !important;
-  color: rgba(255,255,255,.96) !important;
-}
-
-/* Badge contrast */
-.theme-dark .badge.bg-secondary {
-  background: rgba(255,255,255,.12) !important;
-  color: rgba(255,255,255,.92) !important;
-  border: 1px solid rgba(255,255,255,.12) !important;
-}
-.theme-dark .badge.bg-dark {
-  background: rgba(0,0,0,.35) !important;
-  color: rgba(255,255,255,.92) !important;
-  border: 1px solid rgba(255,255,255,.12) !important;
 }
 
 /* PageHeader: se usi bg-light, in dark diventa illeggibile */

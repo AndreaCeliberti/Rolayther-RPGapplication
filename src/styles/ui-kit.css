@@ -1,0 +1,444 @@
+/* =====================================================================================================
+   Rolayther · pulsanti e badge
+
+   Qui si decide come si vede ogni `.btn` e ogni `.rl-badge`. I componenti non scelgono colori:
+   scelgono un significato (variant="primary", <StateBadge state={1} />) e l'aspetto sta tutto qui.
+
+   Il carattere viene dai loghi: acciaio spazzolato per bordi e riflessi, il viola del sito per l'azione
+   principale, e un lampo azzurro che attraversa il pulsante al passaggio, come il taglio nella R.
+
+   Regole
+   - Globale, non sotto `.theme-dark`: le finestre e i menu di React-Bootstrap stanno fuori dal tema.
+   - Niente `!important` (salvo un caso nella barra in alto, spiegato in fondo): il file si carica
+     dopo Bootstrap e dopo il tema, e vince per ordine.
+   - Il giallo è solo per ciò che chiede attenzione (ultimo posto libero, "Reinvia email").
+   ===================================================================================================== */
+
+:root {
+  /* acciaio, preso dall'insegna */
+  --rl-steel-lo: #8a92ae;
+
+  /* colori di stato */
+  --rl-lilac: #a78bfa;
+  --rl-cyan: #67d8f5; /* il lampo del logo */
+  --rl-emerald: #34d399;
+  --rl-amber: #fbbf24;
+  --rl-rose: #fb7185;
+
+  --rl-focus: #b9a4ff; /* anello della tastiera */
+}
+
+/* =====================================================================================================
+   PULSANTI
+   Ogni variante dice solo: testo, riempimento, bordo d'acciaio, bagliore. Il resto è comune.
+   ===================================================================================================== */
+
+.btn {
+  /* Valori di partenza = pulsante "d'acciaio" (outline-secondary). Le varianti più sotto li sostituiscono. */
+  --rl-text: #e6e3f4;
+  --rl-fill: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.015));
+  --rl-edge: linear-gradient(155deg, rgba(241, 243, 251, 0.62), rgba(170, 178, 204, 0.2) 45%, rgba(170, 178, 204, 0.4));
+  --rl-glow: 167, 139, 250; /* r, g, b del bagliore sotto il pulsante */
+  --rl-sheen: rgba(255, 255, 255, 0.16); /* colore del lampo */
+  --rl-tint: rgba(139, 92, 246, 0.16); /* velo che compare al passaggio (solo pulsanti trasparenti) */
+  --rl-lift: 0px;
+
+  --rl-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  --rl-shadow-hover: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 8px 20px -12px rgba(var(--rl-glow), 0.8);
+  --rl-shadow-press: inset 0 2px 6px rgba(0, 0, 0, 0.4);
+
+  --rl-glint: linear-gradient(105deg, transparent 43%, var(--rl-sheen) 50%, transparent 57%);
+
+  /* Bootstrap legge questi colori in ogni stato (hover, premuto, disattivato): li rendo trasparenti
+     e punto il testo su --rl-text. Il colore vero lo disegnano i livelli di sfondo e l'anello. */
+  --bs-btn-color: var(--rl-text);
+  --bs-btn-hover-color: var(--rl-text);
+  --bs-btn-active-color: var(--rl-text);
+  --bs-btn-disabled-color: var(--rl-text);
+  --bs-btn-bg: transparent;
+  --bs-btn-hover-bg: transparent;
+  --bs-btn-active-bg: transparent;
+  --bs-btn-disabled-bg: transparent;
+  --bs-btn-border-color: transparent;
+  --bs-btn-hover-border-color: transparent;
+  --bs-btn-active-border-color: transparent;
+  --bs-btn-disabled-border-color: transparent;
+  --bs-btn-focus-box-shadow: var(--rl-shadow);
+  --bs-btn-border-radius: 14px;
+  --bs-btn-font-weight: 600;
+  --bs-btn-disabled-opacity: 0.5;
+
+  position: relative;
+  /* livelli, dal più alto: lampo · riempimento. Il lampo parcheggia fuori dal pulsante, a sinistra. */
+  background-image: var(--rl-glint), var(--rl-fill);
+  background-repeat: no-repeat;
+  background-size: 260% 100%, 100% 100%;
+  background-position: 100% 0, 0 0;
+  background-origin: border-box;
+  background-clip: border-box;
+  box-shadow: var(--rl-shadow);
+  transition: background-color 0.18s ease, box-shadow 0.2s ease, filter 0.18s ease, transform 0.18s ease;
+}
+.btn-sm {
+  --bs-btn-border-radius: 12px;
+}
+.btn-lg {
+  --bs-btn-border-radius: 16px;
+}
+
+/* Bordo d'acciaio: un anello di 1px con sfumatura, ritagliato con una maschera così il riempimento
+   sotto può restare trasparente. Senza maschere (browser molto vecchi) l'anello non si disegna,
+   altrimenti coprirebbe tutto il pulsante. */
+@supports ((-webkit-mask-composite: xor) or (mask-composite: exclude)) {
+  .btn::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    padding: 1px;
+    border-radius: inherit;
+    background: var(--rl-edge);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    opacity: 0.9;
+    pointer-events: none;
+    transition: opacity 0.18s ease;
+  }
+  .btn:hover::before {
+    opacity: 1; /* l'anello si accende un poco al passaggio */
+  }
+}
+
+/* ---------- Varianti ---------- */
+
+/* Azione principale: viola, bordo d'acciaio chiaro, bagliore */
+.btn-primary {
+  --rl-text: #fff;
+  --rl-fill: linear-gradient(180deg, #8456f4 0%, #6d3ae0 55%, #5b2cc6 100%);
+  --rl-edge: linear-gradient(155deg, #f4f6ff 0%, rgba(196, 181, 253, 0.72) 34%, rgba(124, 92, 246, 0.9) 100%);
+  --rl-glow: 139, 92, 246;
+  --rl-sheen: rgba(214, 240, 255, 0.46);
+  --rl-lift: -1px;
+  --rl-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 8px 22px -10px rgba(var(--rl-glow), 0.75);
+  --rl-shadow-hover: inset 0 1px 0 rgba(255, 255, 255, 0.34), 0 12px 28px -10px rgba(var(--rl-glow), 0.95);
+}
+
+/* Acciaio: l'azione secondaria (Annulla, Aggiorna, Scegli immagine) */
+.btn-outline-secondary {
+  --rl-text: #e6e3f4;
+}
+.btn-secondary {
+  --rl-text: #f1f3fb;
+  --rl-fill: linear-gradient(180deg, #3a3558 0%, #28243f 100%);
+  --rl-edge: linear-gradient(155deg, rgba(241, 243, 251, 0.7), rgba(170, 178, 204, 0.25) 45%, rgba(170, 178, 204, 0.45));
+  --rl-sheen: rgba(255, 255, 255, 0.2);
+  --rl-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 6px 16px -10px rgba(0, 0, 0, 0.8);
+}
+
+/* Acciaio chiaro: sulla barra in alto */
+.btn-outline-light {
+  --rl-text: #fff;
+  --rl-edge: linear-gradient(155deg, rgba(241, 243, 251, 0.85), rgba(196, 201, 220, 0.3) 45%, rgba(196, 201, 220, 0.55));
+  --rl-tint: rgba(255, 255, 255, 0.1);
+}
+.btn-light {
+  --rl-text: #15121f;
+  --rl-fill: linear-gradient(180deg, #f6f7ff 0%, #c6cce0 100%);
+  --rl-edge: linear-gradient(155deg, #ffffff, rgba(196, 201, 220, 0.6) 50%, rgba(138, 146, 174, 0.8));
+  --rl-sheen: rgba(255, 255, 255, 0.7);
+  --rl-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 8px 20px -12px rgba(241, 243, 251, 0.5);
+}
+.btn-outline-dark,
+.btn-dark {
+  --rl-text: #e6e3f4;
+  --rl-fill: linear-gradient(180deg, rgba(10, 7, 16, 0.75), rgba(10, 7, 16, 0.55));
+}
+
+/* Viola in contorno: azioni legate al contenuto (Modifica, Scegli immagine) */
+.btn-outline-primary {
+  --rl-text: #d4c8ff;
+  --rl-fill: linear-gradient(180deg, rgba(139, 92, 246, 0.12), rgba(139, 92, 246, 0.05));
+  --rl-edge: linear-gradient(155deg, rgba(221, 211, 255, 0.8), rgba(167, 139, 250, 0.3) 45%, rgba(139, 92, 246, 0.6));
+  --rl-tint: rgba(139, 92, 246, 0.24);
+}
+
+/* Rosa: distruttivo (Cancella, Annulla sessione) */
+.btn-outline-danger {
+  --rl-text: #fdb4c0;
+  --rl-fill: linear-gradient(180deg, rgba(251, 113, 133, 0.1), rgba(251, 113, 133, 0.04));
+  --rl-edge: linear-gradient(155deg, rgba(254, 205, 211, 0.75), rgba(251, 113, 133, 0.28) 45%, rgba(251, 113, 133, 0.55));
+  --rl-glow: 251, 113, 133;
+  --rl-tint: rgba(251, 113, 133, 0.2);
+}
+.btn-danger {
+  --rl-text: #fff;
+  --rl-fill: linear-gradient(180deg, #e11d48 0%, #be123c 100%);
+  --rl-edge: linear-gradient(155deg, #ffe4e9, rgba(251, 113, 133, 0.7) 40%, rgba(190, 18, 60, 0.9));
+  --rl-glow: 244, 63, 94;
+  --rl-sheen: rgba(255, 228, 233, 0.45);
+  --rl-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 8px 20px -10px rgba(var(--rl-glow), 0.7);
+}
+
+/* Smeraldo: conferma, approva */
+.btn-outline-success {
+  --rl-text: #8cf0c8;
+  --rl-fill: linear-gradient(180deg, rgba(52, 211, 153, 0.1), rgba(52, 211, 153, 0.04));
+  --rl-edge: linear-gradient(155deg, rgba(209, 250, 229, 0.75), rgba(52, 211, 153, 0.28) 45%, rgba(52, 211, 153, 0.55));
+  --rl-glow: 52, 211, 153;
+  --rl-tint: rgba(52, 211, 153, 0.2);
+}
+.btn-success {
+  --rl-text: #fff;
+  --rl-fill: linear-gradient(180deg, #047857 0%, #065f46 100%);
+  --rl-edge: linear-gradient(155deg, #d1fae5, rgba(52, 211, 153, 0.7) 40%, rgba(4, 120, 87, 0.9));
+  --rl-glow: 16, 185, 129;
+  --rl-sheen: rgba(209, 250, 229, 0.45);
+  --rl-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22), 0 8px 20px -10px rgba(var(--rl-glow), 0.7);
+}
+
+/* Ambra: solo per ciò che chiede attenzione (es. "Reinvia email") */
+.btn-warning {
+  --rl-text: #1c1203;
+  --rl-fill: linear-gradient(180deg, #fcd34d 0%, #f59e0b 100%);
+  --rl-edge: linear-gradient(155deg, #fffbe6, rgba(252, 211, 77, 0.8) 40%, rgba(180, 110, 8, 0.9));
+  --rl-glow: 245, 158, 11;
+  --rl-sheen: rgba(255, 251, 230, 0.7);
+  --rl-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 8px 20px -10px rgba(var(--rl-glow), 0.7);
+}
+.btn-outline-warning {
+  --rl-text: #fde08a;
+  --rl-fill: linear-gradient(180deg, rgba(251, 191, 36, 0.1), rgba(251, 191, 36, 0.04));
+  --rl-edge: linear-gradient(155deg, rgba(254, 243, 199, 0.75), rgba(251, 191, 36, 0.28) 45%, rgba(251, 191, 36, 0.55));
+  --rl-glow: 251, 191, 36;
+  --rl-tint: rgba(251, 191, 36, 0.18);
+}
+
+/* Azzurro del lampo: informativo */
+.btn-info {
+  --rl-text: #04141a;
+  --rl-fill: linear-gradient(180deg, #67e8f9 0%, #22b8d6 100%);
+  --rl-edge: linear-gradient(155deg, #ecfeff, rgba(103, 216, 245, 0.8) 40%, rgba(8, 145, 178, 0.9));
+  --rl-glow: 34, 211, 238;
+  --rl-sheen: rgba(236, 254, 255, 0.7);
+  --rl-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 8px 20px -10px rgba(var(--rl-glow), 0.7);
+}
+.btn-outline-info {
+  --rl-text: #b8eefc;
+  --rl-fill: linear-gradient(180deg, rgba(103, 216, 245, 0.1), rgba(103, 216, 245, 0.04));
+  --rl-edge: linear-gradient(155deg, rgba(207, 250, 254, 0.75), rgba(103, 216, 245, 0.28) 45%, rgba(103, 216, 245, 0.55));
+  --rl-glow: 103, 216, 245;
+  --rl-tint: rgba(103, 216, 245, 0.18);
+}
+
+/* ---------- Stati ---------- */
+
+/* Pulsanti trasparenti: al passaggio prendono un velo colorato. Quelli pieni si illuminano un poco. */
+.btn:hover {
+  background-color: var(--rl-tint);
+  box-shadow: var(--rl-shadow-hover);
+}
+.btn-primary:hover,
+.btn-secondary:hover,
+.btn-light:hover,
+.btn-danger:hover,
+.btn-success:hover,
+.btn-warning:hover,
+.btn-info:hover,
+.btn-dark:hover {
+  background-color: transparent; /* niente velo sopra un riempimento pieno */
+  filter: brightness(1.08);
+}
+
+/* Il lampo e il piccolo rialzo hanno senso solo dove c'è un puntatore che passa sopra */
+@media (hover: hover) {
+  .btn:hover {
+    background-position: 0 0, 0 0; /* il lampo attraversa il pulsante, una volta */
+    transform: translateY(var(--rl-lift));
+    transition: background-color 0.18s ease, box-shadow 0.2s ease, filter 0.18s ease, transform 0.18s ease,
+      background-position 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+}
+
+.btn:active,
+.btn.active,
+.btn.show {
+  transform: none;
+  box-shadow: var(--rl-shadow-press);
+  filter: brightness(0.94);
+}
+
+/* Tastiera: anello ben visibile, staccato dal bordo (come nella Home) */
+.btn:focus-visible {
+  outline: 2px solid var(--rl-focus);
+  outline-offset: 3px;
+  box-shadow: var(--rl-shadow);
+}
+
+/* Disattivato: opacità e niente bagliore (l'opacità la mette Bootstrap con --bs-btn-disabled-opacity) */
+.btn:disabled,
+.btn.disabled,
+fieldset:disabled .btn {
+  box-shadow: none;
+  filter: saturate(0.6);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn,
+  .btn:hover,
+  .btn::before {
+    transition: none;
+  }
+  .btn:hover {
+    background-position: 100% 0, 0 0; /* niente lampo */
+    transform: none;
+  }
+}
+
+/* Alto contrasto di Windows: i colori vengono sostituiti, quindi serve un bordo vero */
+@media (forced-colors: active) {
+  .btn {
+    border-color: ButtonText;
+  }
+  .btn::before {
+    display: none;
+  }
+}
+
+/* =====================================================================================================
+   BADGE
+   <span class="rl-badge rl-badge--TONO [rl-badge--FORMA]">. I componenti React stanno in
+   components/common/Badges.jsx: StateBadge, RoleBadge, SeatsBadge, Chip.
+   Il significato non sta solo nel colore: c'è sempre il testo, e il segno davanti cambia forma
+   (cerchio, rombo, scintilla, anello tratteggiato).
+   ===================================================================================================== */
+
+.rl-badge {
+  --rl-b-bg: rgba(255, 255, 255, 0.07);
+  --rl-b-line: rgba(196, 201, 220, 0.32);
+  --rl-b-text: #dde1f1;
+  --rl-b-mark: var(--rl-lilac);
+
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45em;
+  padding: 0.28em 0.72em;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  vertical-align: middle;
+  color: var(--rl-b-text);
+  background: var(--rl-b-bg);
+  border: 1px solid var(--rl-b-line);
+  border-radius: 999px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+.rl-badge--lg {
+  font-size: 0.875rem;
+  padding: 0.34em 0.9em;
+}
+
+/* il segno davanti al testo */
+.rl-badge::before {
+  content: "";
+  flex: none;
+  width: 0.52em;
+  height: 0.52em;
+  border-radius: 50%;
+  background: var(--rl-b-mark);
+}
+.rl-badge--no-mark::before {
+  display: none;
+}
+.rl-badge--diamond::before {
+  border-radius: 1px;
+  transform: rotate(45deg);
+}
+.rl-badge--sparkle::before {
+  width: 0.95em;
+  height: 0.95em;
+  border-radius: 0;
+  clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
+}
+.rl-badge--ring::before {
+  width: 0.62em;
+  height: 0.62em;
+  background: transparent;
+  border: 1.5px dashed var(--rl-b-mark);
+}
+.rl-badge--glow::before {
+  box-shadow: 0 0 0.7em 0.05em var(--rl-b-mark);
+}
+
+/* toni */
+.rl-badge--violet {
+  --rl-b-bg: rgba(139, 92, 246, 0.2);
+  --rl-b-line: rgba(167, 139, 250, 0.5);
+  --rl-b-text: #e6dcff;
+  --rl-b-mark: var(--rl-lilac);
+}
+.rl-badge--cyan {
+  --rl-b-bg: rgba(103, 216, 245, 0.13);
+  --rl-b-line: rgba(103, 216, 245, 0.45);
+  --rl-b-text: #b8eefc;
+  --rl-b-mark: var(--rl-cyan);
+}
+.rl-badge--emerald {
+  --rl-b-bg: rgba(52, 211, 153, 0.13);
+  --rl-b-line: rgba(52, 211, 153, 0.42);
+  --rl-b-text: #8cf0c8;
+  --rl-b-mark: var(--rl-emerald);
+}
+.rl-badge--amber {
+  --rl-b-bg: rgba(251, 191, 36, 0.14);
+  --rl-b-line: rgba(251, 191, 36, 0.5);
+  --rl-b-text: #fde08a;
+  --rl-b-mark: var(--rl-amber);
+}
+.rl-badge--rose {
+  --rl-b-bg: rgba(251, 113, 133, 0.13);
+  --rl-b-line: rgba(251, 113, 133, 0.45);
+  --rl-b-text: #fdb4c0;
+  --rl-b-mark: var(--rl-rose);
+}
+.rl-badge--muted {
+  --rl-b-bg: rgba(255, 255, 255, 0.04);
+  --rl-b-line: rgba(196, 201, 220, 0.22);
+  --rl-b-text: #aab2cc;
+  --rl-b-mark: var(--rl-steel-lo);
+}
+/* acciaio lucido: l'Admin */
+.rl-badge--plate {
+  --rl-b-bg: linear-gradient(180deg, #f6f7ff 0%, #c2c8de 100%);
+  --rl-b-line: rgba(255, 255, 255, 0.75);
+  --rl-b-text: #15121f;
+  --rl-b-mark: #5b3fd0;
+  box-shadow: inset 0 1px 0 #fff, 0 4px 14px -8px rgba(196, 201, 220, 0.6);
+}
+
+/* =====================================================================================================
+   ALTRO
+   ===================================================================================================== */
+
+/* Il "primario" di Bootstrap è blu: dove resta (i finti link nelle finestre di accesso) diventa il lilla del tema */
+.text-primary {
+  --bs-primary-rgb: 167, 139, 250;
+}
+
+/* Nella barra in alto il tema colora ogni elemento sotto il mouse (`.navbar :hover`, con !important):
+   il testo del badge deve restare il suo, quindi qui serve !important anche a noi. */
+.navbar .rl-badge,
+.navbar .rl-badge:hover {
+  color: var(--rl-b-text) !important;
+}
+
+@media (forced-colors: active) {
+  .rl-badge {
+    border-color: CanvasText;
+  }
+  .rl-badge::before {
+    background: CanvasText;
+  }
+}

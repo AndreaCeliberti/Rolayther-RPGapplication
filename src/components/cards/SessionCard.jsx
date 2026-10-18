@@ -1,11 +1,11 @@
-import { Card, Badge, Button } from "react-bootstrap";
+import { Card, Button } from "react-bootstrap";
 import { Link } from "react-router-dom";
-import { stateBadgeVariant, stateLabel } from "../../utils/sessionState";
+import { StateBadge, SeatsBadge } from "../common/Badges";
+import { normalizeSession, STATE } from "../../utils/homeSessions";
 
 export default function SessionCard({ session }) {
-  const playersCount = session.players?.length ?? 0;
-  const maxPlayers = session.numbOfPlayer ?? 0;
-  const isFull = maxPlayers > 0 && playersCount >= maxPlayers;
+  const { seats, state } = normalizeSession(session);
+  const finished = state === STATE.Completed || state === STATE.Cancelled;
 
   const scheduled = session.scheduledAt
     ? new Date(session.scheduledAt).toLocaleString()
@@ -24,12 +24,7 @@ export default function SessionCard({ session }) {
       <Card.Body className="d-flex flex-column" style={{ color: "var(--muted)" }}>
         <div className="d-flex justify-content-between align-items-start gap-2">
           <Card.Title className="fs-5 mb-1">{session.sessionTitle}</Card.Title>
-          <Badge bg={isFull ? "danger" : "success"}>
-            {isFull ? "Full" : "Open"}
-          </Badge>
-          <Badge bg={stateBadgeVariant(session.currentState)} className="ms-auto">
-            {stateLabel(session.currentState)}
-          </Badge>
+          <StateBadge state={session.currentState} className="ms-auto flex-shrink-0" />
         </div>
 
         <Card.Text style={{ color: "var(--muted)" }} className=" small mb-2">
@@ -41,10 +36,8 @@ export default function SessionCard({ session }) {
           {(session.sessionDescription || "").length > 90 ? "…" : ""}
         </Card.Text>
 
-        <div className="mt-auto d-flex justify-content-between align-items-center">
-          <span style={{ color: "var(--muted)" }} className="small">
-            👥 {playersCount}/{maxPlayers || "∞"}
-          </span>
+        <div className="mt-auto d-flex justify-content-between align-items-center gap-2">
+          <SeatsBadge seats={seats} finished={finished} />
 
           <Button
             as={Link}

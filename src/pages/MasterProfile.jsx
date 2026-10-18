@@ -5,7 +5,6 @@ import {
   Col,
   Card,
   Spinner,
-  Badge,
   ListGroup,
 } from "react-bootstrap";
 
@@ -17,7 +16,7 @@ import { ToastContext } from "../context/ToastContext";
 import { MastersApi } from "../api/masters.api";
 import { SessionsApi } from "../api/sessions.api";
 import SessionStateControl from "../components/SessionStateControl";
-import { stateBadgeVariant, stateLabel } from "../utils/sessionState";
+import { Chip, RoleBadge, StateBadge } from "../components/common/Badges";
 
 
 export default function MasterProfile() {
@@ -110,9 +109,7 @@ export default function MasterProfile() {
                         {me.nickName || "Master"}
                       </div>
                       <div className="mt-2">
-                        <Badge bg="warning" text="dark">
-                          Master
-                        </Badge>
+                        <RoleBadge role="Master" />
                       </div>
                     </div>
                   </div>
@@ -137,14 +134,10 @@ export default function MasterProfile() {
                   {/* Extra descrittivi "leggeri" */}
                   <div className="mt-3 d-flex flex-wrap gap-2">
                     {me.platformsCount != null && (
-                      <Badge bg="light" text="dark" className="border">
-                        🧩 Platforms: {me.platformsCount}
-                      </Badge>
+                      <Chip>🧩 Platforms: {me.platformsCount}</Chip>
                     )}
                     {me.gamesCount != null && (
-                      <Badge bg="light" text="dark" className="border">
-                        🎮 Games: {me.gamesCount}
-                      </Badge>
+                      <Chip>🎮 Games: {me.gamesCount}</Chip>
                     )}
                   </div>
 
@@ -257,19 +250,17 @@ export default function MasterProfile() {
                               </div>
 
                               <div className="text-end">
-                                <Badge bg="secondary">
+                                <Chip>
                                   👥{" "}
                                   {s.players?.length ??
                                     s.joinedCount ??
                                     0}
                                   /{s.numbOfPlayer ?? "∞"}
-                                </Badge>
+                                </Chip>
 
                                 {s.currentState != null && (
                                   <div className="mt-2">
-                                    <Badge bg={stateBadgeVariant(s.currentState)}>
-                                      {stateLabel(s.currentState)}
-                                    </Badge>
+                                    <StateBadge state={s.currentState} />
                                   </div>
                                   
                                 )}

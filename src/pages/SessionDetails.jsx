@@ -6,7 +6,6 @@ import {
   Col,
   Card,
   Button,
-  Badge,
   Spinner,
   ListGroup,
 } from "react-bootstrap";
@@ -15,7 +14,7 @@ import PageHeader from "../components/common/PageHeader";
 import EmptyState from "../components/common/EmptyState";
 import { ToastContext } from "../context/ToastContext";
 import { AuthContext } from "../context/AuthContext";
-import { stateBadgeVariant, stateLabel } from "../utils/sessionState";
+import { BaseBadge, Chip, StateBadge } from "../components/common/Badges";
 import { SessionsApi } from "../api/sessions.api";
 import { PlayersApi } from "../api/players.api";
 
@@ -190,29 +189,22 @@ const handleJoin = async () => {
                       </div>
 
                       <div className="mt-2 d-flex gap-2 flex-wrap">
-                        {session.game?.title && (
-                          <Badge bg="secondary"> {session.game.title}</Badge>
-                        )}
-                        {session.genre?.name && (
-                          <Badge bg="secondary"> {session.genre.name}</Badge>
-                        )}
-                        
+                        {session.game?.title && <Chip>{session.game.title}</Chip>}
+                        {session.genre?.name && <Chip>{session.genre.name}</Chip>}
                         {session.master?.nickName && (
-                          <Badge bg="secondary">Mastered by {session.master.nickName}</Badge>
+                          <Chip>Mastered by {session.master.nickName}</Chip>
                         )}
                       <div className=" d-flex align-items-center gap-2">
-                        <Badge bg={stateBadgeVariant(session.currentState)}>
-                          {stateLabel(session.currentState)}
-                        </Badge>
+                        <StateBadge state={session.currentState} />
                       </div>
                       </div>
                     </div>
                     
                     <div className="text-sm-end">
                       
-                      <Badge bg={isFull ? "danger" : "success"} className="fs-6">
+                      <BaseBadge tone={isFull ? "muted" : "emerald"} mark="none" size="lg">
                         👥 {seatsTaken}/{maxPlayers}
-                      </Badge>
+                      </BaseBadge>
                       <div className="text-muted small mt-1">
                         {isFull ? "Posti esauriti" : `${seatsAvailable} posti disponibili`}
                       </div>
@@ -242,7 +234,7 @@ const handleJoin = async () => {
                     <div className="d-flex flex-column flex-sm-row gap-2">
                      
                       <Button
-                        variant="success"
+                        variant="primary"
                         onClick={handleJoin}
                         disabled={!canJoin || joining}
                       >
@@ -336,9 +328,9 @@ const handleJoin = async () => {
                               </div>
 
                               {mine && (
-                                <Badge pill bg="primary" className="rol-badge">
+                                <BaseBadge tone="violet" mark="none">
                                   Tu
-                                </Badge>
+                                </BaseBadge>
                               )}
                             </div>
                           </ListGroup.Item>

@@ -7,7 +7,6 @@ import {
   Table,
   Button,
   Spinner,
-  Badge,
   Stack,
 } from "react-bootstrap";
 
@@ -16,6 +15,7 @@ import { ToastContext } from "../context/ToastContext";
 
 import PageHeader from "../components/common/PageHeader";
 import EmptyState from "../components/common/EmptyState";
+import { Chip, RoleBadge } from "../components/common/Badges";
 import ImageUploadButton from "../components/common/ImageUploadButton";
 import ImageThumb from "../components/common/ImageThumb";
 
@@ -304,7 +304,7 @@ export default function AdminDashboard() {
   const HeaderActions = useMemo(() => {
     return (
       <Stack direction="horizontal" gap={2} className="flex-wrap">
-        <Badge bg="dark">Admin</Badge>
+        <RoleBadge role="Admin" />
       </Stack>
     );
   }, []);
@@ -434,9 +434,9 @@ const deleteBody = useMemo(() => {
                             </td>
                             <td>{s.duration}</td>
                             <td>
-                              <Badge bg="secondary">
-                                 {(s.players?.length ?? 0)}/{s.numbOfPlayer}
-                              </Badge>
+                              <Chip>
+                                {(s.players?.length ?? 0)}/{s.numbOfPlayer}
+                              </Chip>
                             </td>
                             <td className="text-end">
                               <div className="d-inline-flex gap-2">
