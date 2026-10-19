@@ -2,6 +2,7 @@ import { Card, Button } from "react-bootstrap";
 import { Link } from "react-router-dom";
 import { StateBadge, SeatsBadge } from "../common/Badges";
 import { normalizeSession, STATE } from "../../utils/homeSessions";
+import { isNoteworthyState } from "../../utils/sessionState";
 
 export default function SessionCard({ session }) {
   const { seats, state } = normalizeSession(session);
@@ -24,7 +25,8 @@ export default function SessionCard({ session }) {
       <Card.Body className="d-flex flex-column" style={{ color: "var(--muted)" }}>
         <div className="d-flex justify-content-between align-items-start gap-2">
           <Card.Title className="fs-5 mb-1">{session.sessionTitle}</Card.Title>
-          <StateBadge state={session.currentState} className="ms-auto flex-shrink-0" />
+          {/* lo stato si mostra solo quando dice qualcosa: "Pubblicata" e "Piena" no (i posti lo dicono già) */}
+          {isNoteworthyState(state) && <StateBadge state={state} className="ms-auto flex-shrink-0" />}
         </div>
 
         <Card.Text style={{ color: "var(--muted)" }} className=" small mb-2">
