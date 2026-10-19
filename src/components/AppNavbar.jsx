@@ -5,17 +5,11 @@ import {
   Container,
   NavDropdown,
   Button,
-  Badge,
 } from "react-bootstrap";
 import { NavLink, useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import logo from "../assets/InsegnaRolayther.png";
-
-function roleBadgeVariant(role) {
-  if (role === "Admin") return "warning";
-  if (role === "Master") return "info";
-  return "success"; // Player
-}
+import { RoleBadge } from "./common/Badges";
 
 export default function AppNavbar({
   openLogin,
@@ -124,9 +118,7 @@ export default function AppNavbar({
                     <span className="text-truncate" style={{ maxWidth: 150 }}>
                       {user.email || "Account"}
                     </span>
-                    <Badge bg={roleBadgeVariant(user.role)} text="dark">
-                      {user.role}
-                    </Badge>
+                    <RoleBadge role={user.role} />
                   </span>
                 }
               >

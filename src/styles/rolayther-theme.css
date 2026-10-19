@@ -86,34 +86,7 @@ a:hover{ color: var(--primary); }
 }
 .form-control::placeholder{ color: rgba(243,240,255,.45); }
 
-.btn{
-  border-radius: 14px;
-}
-.btn-primary{
-  background: linear-gradient(135deg, var(--primary), #6d28d9);
-  border: 1px solid rgba(167,120,255,.35);
-  box-shadow: 0 10px 24px rgba(139,92,246,.20);
-}
-.btn-primary:hover{
-  transform: translateY(-1px);
-  filter: brightness(1.05);
-}
-.btn-outline-secondary{
-  border-color: rgba(255,255,255,.16);
-  color: var(--text);
-}
-.btn-outline-secondary:hover{
-  background: rgba(255,255,255,.06);
-  border-color: rgba(255,255,255,.22);
-}
-
-.badge{
-  border-radius: 999px;
-}
-.badge.bg-light{
-  background: rgba(255,255,255,.08) !important;
-  border: 1px solid rgba(255,255,255,.12);
-}
+/* Pulsanti e badge: vedi ui-kit.css */
 .shadow-sm{ box-shadow: var(--shadow-soft) !important; }
 .border-0{ border: 0 !important; }
 

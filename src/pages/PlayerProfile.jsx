@@ -1,7 +1,8 @@
 import { useContext, useEffect, useState } from "react";
-import { Container, Row, Col, Card, Spinner, Badge, ListGroup } from "react-bootstrap";
+import { Container, Row, Col, Card, Spinner, ListGroup } from "react-bootstrap";
 import PageHeader from "../components/common/PageHeader";
 import EmptyState from "../components/common/EmptyState";
+import { Chip, RoleBadge } from "../components/common/Badges";
 import ImageUploadButton from "../components/common/ImageUploadButton";
 import { ToastContext } from "../context/ToastContext";
 import { PlayersApi } from "../api/players.api";
@@ -80,7 +81,7 @@ export default function PlayerProfile() {
 
                     <div className="flex-grow-1">
                       <div className="fw-semibold fs-5">{me.nickName || "Player"}</div>
-                      <Badge bg="success">Player</Badge>
+                      <RoleBadge role="Player" />
                     </div>
                   </div>
 
@@ -127,9 +128,9 @@ export default function PlayerProfile() {
                                 {s.genre?.name ? `🏷️ ${s.genre.name}` : ""}
                               </div>
                             </div>
-                            <Badge bg="secondary">
+                            <Chip>
                               👥 {(s.players?.length ?? s.joinedCount ?? 0)}/{s.numbOfPlayer ?? "∞"}
-                            </Badge>
+                            </Chip>
                           </div>
                         </ListGroup.Item>
                       ))}

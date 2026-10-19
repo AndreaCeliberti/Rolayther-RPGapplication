@@ -1,8 +1,9 @@
 import { useContext, useMemo, useState } from "react";
-import { Badge, Button, Form, InputGroup, Spinner } from "react-bootstrap";
+import { Button, Form, InputGroup, Spinner } from "react-bootstrap";
 import { ToastContext } from "../context/ToastContext";
 import { SessionsApi } from "../api/sessions.api";
-import { stateBadgeVariant, stateLabel, STATE_LABELS } from "../utils/sessionState";
+import { stateLabel, STATE_LABELS } from "../utils/sessionState";
+import { StateBadge } from "./common/Badges";
 import { allowedNextStates } from "../utils/sessionState";
 
 
@@ -50,9 +51,7 @@ export default function SessionStateControl({ session, onUpdated }) {
     <div className="d-flex flex-column gap-2">
       <div className="d-flex align-items-center justify-content-between">
         <div className="text-muted small">Stato attuale</div>
-        <Badge bg={stateBadgeVariant(current)}>
-          {stateLabel(current)}
-        </Badge>
+        <StateBadge state={current} />
       </div>
 
       <InputGroup>

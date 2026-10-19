@@ -8,7 +8,7 @@ export const SESSION_STATES = {
 };
 
 export const STATE_LABELS = {
-  0: "In Arrivo",
+  0: "In arrivo",
   1: "Pubblicata",
   2: "Piena",
   3: "In corso",
@@ -21,18 +21,6 @@ export function stateLabel(state) {
   return STATE_LABELS[state] ?? String(state);
 }
 
-export function stateBadgeVariant(state) {
-  // varianti bootstrap: primary, secondary, success, danger, warning, info, light, dark
-  switch (Number(state)) {
-    case 0: return "secondary"; // Draft
-    case 1: return "primary";   // Published
-    case 2: return "warning";   // Full
-    case 3: return "info";      // InProgress
-    case 4: return "success";   // Completed
-    case 5: return "danger";    // Cancelled
-    default: return "secondary";
-  }
-}
 export const ALLOWED_TRANSITIONS = {
   0: [1, 2, 3,4, 5],     // Draft -> Published, Cancelled
   1: [0, 2, 3, 4, 5],     // Published -> Full, Cancelled

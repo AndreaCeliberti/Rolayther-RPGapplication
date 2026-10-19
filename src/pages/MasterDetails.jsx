@@ -1,12 +1,13 @@
 import { useEffect, useState, useContext } from "react";
 import { useParams } from "react-router-dom";
-import { Container, Row, Col, Card, Spinner, Badge } from "react-bootstrap";
+import { Container, Row, Col, Card, Spinner } from "react-bootstrap";
 
 import { MastersApi } from "../api/masters.api";
 import { ToastContext } from "../context/ToastContext";
 
 import PageHeader from "../components/common/PageHeader";
 import EmptyState from "../components/common/EmptyState";
+import { Chip } from "../components/common/Badges";
 
 export default function MasterDetails() {
   const { id } = useParams();
@@ -98,9 +99,7 @@ export default function MasterDetails() {
                 {master.email}
               </div>
 
-              <Badge bg="dark">
-                Sessioni: {master.sessions?.length ?? 0}
-              </Badge>
+              <Chip>Sessioni: {master.sessions?.length ?? 0}</Chip>
             </Card>
           </Col>
 

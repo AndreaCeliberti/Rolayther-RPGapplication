@@ -110,38 +110,17 @@
   text-decoration-color: currentColor;
 }
 
-/* Il tema colora tutti i link di viola: sui pulsanti il testo resta bianco */
-.home a.btn-primary,
-.home a.btn-primary:hover {
-  color: #fff;
-  text-decoration: none;
-}
-.home .btn-primary {
-  font-weight: 600;
-}
+/* Pulsanti: l'aspetto è in ui-kit.css; qui solo la taglia di quelli grandi */
 .home .btn-lg {
   padding: 0.8rem 1.6rem;
   font-size: 1.05rem;
-  border-radius: 16px;
-}
-.home .btn-outline-secondary {
-  border-color: rgba(167, 139, 250, 0.45);
-  color: var(--hm-text);
-  font-weight: 600;
-}
-.home .btn-outline-secondary:hover,
-.home .btn-outline-secondary:focus-visible {
-  background: rgba(139, 92, 246, 0.16);
-  border-color: rgba(167, 139, 250, 0.7);
-  color: #fff;
 }
 
 .home .hm-link:focus-visible,
 .home .hm-ghost:focus-visible,
 .home .hm-row:focus-visible,
 .home .hm-person:focus-visible,
-.home .hm-tablecard__title a:focus-visible,
-.home .btn:focus-visible {
+.home .hm-tablecard__title a:focus-visible {
   outline: 2px solid var(--hm-lilac);
   outline-offset: 3px;
 }
