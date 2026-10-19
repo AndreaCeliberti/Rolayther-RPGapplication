@@ -99,13 +99,13 @@ const handleJoin = async () => {
   setJoining(true);
   try {
     await SessionsApi.join(id, mePlayerId);
-    showToast("Sei entrato nella sessione", "success");
+    showToast("Hai preso posto", "success");
     await loadSession();
   } catch (err) {
     const msg =
       err?.response?.data?.message ||
       err?.response?.data?.Message ||
-      "Impossibile entrare nella sessione";
+      "Impossibile prendere posto";
 
     showToast(msg, "danger");
     await loadSession();
@@ -120,13 +120,13 @@ const handleJoin = async () => {
     setLeaving(true);
     try {
       await SessionsApi.leave(id, mePlayerId);
-      showToast("Hai lasciato la sessione", "success");
+      showToast("Hai lasciato il posto", "success");
       await loadSession();
     } catch (err) {
       const msg =
         err?.response?.data?.message ||
         err?.response?.data?.Message ||
-        "Impossibile lasciare la sessione";
+        "Impossibile lasciare il posto";
       showToast(msg, "danger");
     } finally {
       setLeaving(false);
@@ -226,7 +226,7 @@ const handleJoin = async () => {
                     </div>
                   ) : !isPlayer ? (
                     <div className="text-muted small">
-                      Sei loggato come <b>{user.role}</b>. Solo i Player possono fare Join/Leave.
+                      Sei loggato come <b>{user.role}</b>. Solo i Player possono prendere posto.
                     </div>
                   ) : meLoading ? (
                     <div className="text-muted small">Caricamento profilo…</div>
@@ -241,10 +241,10 @@ const handleJoin = async () => {
                         {joining ? (
                           <>
                             <Spinner size="sm" className="me-2" />
-                            Join…
+                            Prendo posto…
                           </>
                         ) : (
-                          " Join sessione"
+                          "Prendi posto"
                         )}
                       </Button>
 
@@ -256,10 +256,10 @@ const handleJoin = async () => {
                         {leaving ? (
                           <>
                             <Spinner size="sm" className="me-2" />
-                            Leave…
+                            Lascio il posto…
                           </>
                         ) : (
-                          "Lascia sessione"
+                          "Lascia il posto"
                         )}
                       </Button>
 

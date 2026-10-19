@@ -16,7 +16,7 @@ import { ToastContext } from "../context/ToastContext";
 import { MastersApi } from "../api/masters.api";
 import { SessionsApi } from "../api/sessions.api";
 import SessionStateControl from "../components/SessionStateControl";
-import { Chip, RoleBadge, StateBadge } from "../components/common/Badges";
+import { Chip, RoleBadge } from "../components/common/Badges";
 
 
 export default function MasterProfile() {
@@ -258,12 +258,7 @@ export default function MasterProfile() {
                                   /{s.numbOfPlayer ?? "∞"}
                                 </Chip>
 
-                                {s.currentState != null && (
-                                  <div className="mt-2">
-                                    <StateBadge state={s.currentState} />
-                                  </div>
-                                  
-                                )}
+                                {/* lo stato lo mostra già SessionStateControl ("Stato attuale"): niente badge doppio */}
                                 <div className="mt-3">
                                   <SessionStateControl
                                     session={s}
