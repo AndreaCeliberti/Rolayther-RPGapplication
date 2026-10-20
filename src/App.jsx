@@ -30,6 +30,7 @@ import CreateSessionModal from "./components/admin/CreateSessionModal";
 import AdminRoute from "./components/admin/AdminRoute";
 import MasterDetails from "./pages/MasterDetails";
 import ConfirmEmailPage from "./pages/ConfirmEmailPage";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 import AppFooter from "./components/AppFooter";
 
 export default function App() {
@@ -142,6 +143,7 @@ export default function App() {
         <Route path="/masterProfile" element={<MasterProfile />} />
         <Route path="/masters/:id" element={<MasterDetails />} />
         <Route path="/confirm-email" element={<ConfirmEmailPage openLogin={openLogin} />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route
           path="/admin"
           element={

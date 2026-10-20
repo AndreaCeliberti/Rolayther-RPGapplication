@@ -39,6 +39,7 @@ export default function AppFooter() {
             <FooterLink to="/games">Games</FooterLink>
             <FooterLink to="/genres">Genres</FooterLink>
             <FooterLink to="/platforms">Platforms</FooterLink>
+            <FooterLink to="/privacy">Privacy</FooterLink>
           </div>
 
           {/* Social */}

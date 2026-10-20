@@ -4,6 +4,8 @@ import api from "../../api/axios";
 import { ToastContext } from "../../context/ToastContext";
 import ImageUploadField from "../common/ImageUploadField";
 import { uploadAvatarAfterRegistration } from "../../api/upload";
+import PrivacyConsentCheck from "./PrivacyConsentCheck";
+import { PRIVACY_POLICY_VERSION } from "../../config/privacy";
 
 const initialState = {
   name: "",
@@ -26,6 +28,7 @@ export default function RegisterPlayerModal({ show, handleClose, openLogin, onRe
   const [validated, setValidated] = useState(false);
   const [pwMismatch, setPwMismatch] = useState(false);
   const [avatarFile, setAvatarFile] = useState(null);
+  const [consent, setConsent] = useState(false); // «ho letto l'informativa e acconsento»
 
   const canSubmit = useMemo(() => {
     return (
@@ -36,9 +39,10 @@ export default function RegisterPlayerModal({ show, handleClose, openLogin, onRe
       form.email &&
       form.password &&
       form.confirmPassword &&
-      form.password === form.confirmPassword
+      form.password === form.confirmPassword &&
+      consent
     );
-  }, [form]);
+  }, [form, consent]);
 
   const onChange = (e) => {
     const { name, value } = e.target;
@@ -59,6 +63,7 @@ export default function RegisterPlayerModal({ show, handleClose, openLogin, onRe
     setValidated(false);
     setPwMismatch(false);
     setAvatarFile(null);
+    setConsent(false);
     setSaving(false);
     handleClose();
   };
@@ -88,6 +93,9 @@ export default function RegisterPlayerModal({ show, handleClose, openLogin, onRe
         email: form.email,
         password: form.password,
         confirmPassword: form.confirmPassword,
+        // consenso al trattamento dei dati personali, con la versione dell'informativa che l'utente ha davanti
+        privacyConsent: consent,
+        privacyPolicyVersion: PRIVACY_POLICY_VERSION,
       };
 
       const res = await api.post("/Auth/register-player", payload);
@@ -289,6 +297,14 @@ export default function RegisterPlayerModal({ show, handleClose, openLogin, onRe
               </Form.Group>
             </Col>
           </Row>
+
+          <PrivacyConsentCheck
+            id="consent-player"
+            checked={consent}
+            onChange={setConsent}
+            invalid={validated && !consent}
+            disabled={saving}
+          />
 
           <Button
             type="submit"
