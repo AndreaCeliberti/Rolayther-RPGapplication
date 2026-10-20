@@ -22,3 +22,11 @@ Le email di Rolayther (conferma registrazione, approvazione Master, iscrizioni, 
 - `public/email/` contiene le immagini usate nelle email (testata, emblema, icone). Il backend le legge da `<indirizzo del sito>/email/...`: non rinominarle né spostarle, e pubblicale insieme al sito.
 - `/confirm-email` (`src/pages/ConfirmEmailPage.jsx`) è la pagina aperta dal pulsante «Conferma la mia email».
 - `/?login=1` apre la finestra di accesso: è il link del pulsante «Accedi a Rolayther» delle email.
+
+## Privacy
+
+Chi si registra (Player o richiesta Master) deve spuntare la casella «Ho letto l'informativa sulla privacy e acconsento al trattamento dei miei dati personali» e può leggere il documento alla pagina `/privacy`, raggiungibile anche dal piè di pagina. Il backend registra data e versione del consenso: la guida completa è in `docs/PRIVACY.md` del repository backend. Lato frontend:
+
+- `src/config/privacy.js` contiene la versione dell'informativa e i dati che solo il titolare conosce (nome, email di contatto, tempi di conservazione, fornitori, età minima). **Vanno completati prima di pubblicare il sito**: finché mancano, `/privacy` si presenta come bozza. Quando cambi il testo in modo che conti per chi si iscrive, aggiorna `PRIVACY_POLICY_VERSION`.
+- `src/pages/PrivacyPolicy.jsx` è il testo dell'informativa (una base di partenza, da far rivedere prima di pubblicarla) e `src/components/auth/PrivacyConsentCheck.jsx` è la casella dei moduli di registrazione.
+- Le finestre con cui l'Admin crea un account per conto di qualcun altro non chiedono il consenso: può darlo solo l'interessato.
