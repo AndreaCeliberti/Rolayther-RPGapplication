@@ -15,9 +15,10 @@ export const PRIVACY_PATH = "/privacy";
 export const PRIVACY_POLICY_VERSION = "2026-10-20";
 
 export const PRIVACY_INFO = {
-  // Chi decide perché e come si trattano i dati: una persona o una società/associazione
+  // Chi decide perché e come si trattano i dati: una persona o una società/associazione.
+  // Scrivi il nome ufficiale (per un'associazione, come compare nello statuto).
   // es. "Mario Rossi" oppure "Associazione Rolayther"
-  controllerName: "",
+  controllerName: "Rolayther associazione ludica",
 
   // Sede o indirizzo del titolare (facoltativo ma consigliato)
   controllerAddress: "",
