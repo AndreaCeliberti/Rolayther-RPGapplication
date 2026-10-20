@@ -15,19 +15,22 @@ export const PRIVACY_PATH = "/privacy";
 export const PRIVACY_POLICY_VERSION = "2026-10-20";
 
 export const PRIVACY_INFO = {
-  // Chi decide perché e come si trattano i dati: una persona o una società/associazione
+  // Chi decide perché e come si trattano i dati: una persona o una società/associazione.
+  // Scrivi il nome ufficiale (per un'associazione, come compare nello statuto).
   // es. "Mario Rossi" oppure "Associazione Rolayther"
-  controllerName: "",
+  controllerName: "Rolayther associazione ludica",
 
   // Sede o indirizzo del titolare (facoltativo ma consigliato)
   controllerAddress: "",
 
   // Casella che leggi davvero: qui arrivano le richieste degli utenti (accesso, correzione, cancellazione...)
-  contactEmail: "",
+  contactEmail: "rolayther@gmail.com",
 
-  // Quando si cancellano i dati dopo che l'utente ha chiesto di cancellarsi (la frase continua: "li eliminiamo ...")
-  // es. "entro 30 giorni"
-  retentionAfterDeletion: "",
+  // Per quanto tempo si conservano i dati di un account che non si usa più (la frase continua così:
+  // "Conserviamo i dati del tuo account finché lo usi e per ...", poi li eliminiamo)
+  // Attenzione: l'app non cancella ancora da sola gli account inattivi e non registra l'ultimo accesso.
+  // es. "un anno dopo l’ultimo utilizzo" (con l’apostrofo tipografico, come nel resto del testo)
+  retention: "un anno dopo l’ultimo utilizzo",
 
   // Servizi esterni che trattano dati per conto di Rolayther: hosting, invio delle email, archiviazione delle immagini
   // es. [{ name: "Brevo", purpose: "invio delle email" }]
@@ -35,7 +38,7 @@ export const PRIVACY_INFO = {
 
   // Età minima per iscriversi (numero). In Italia da 14 anni si può dare il consenso da soli.
   // Attenzione: il sito non controlla l'età, la dichiara soltanto.
-  minAge: null,
+  minAge: 14,
 };
 
 // Elenco di ciò che manca: la pagina è una "bozza" finché non è vuoto
@@ -43,7 +46,7 @@ export function missingPrivacyInfo(info = PRIVACY_INFO) {
   const missing = [];
   if (!info.controllerName) missing.push("titolare del trattamento");
   if (!info.contactEmail) missing.push("email di contatto");
-  if (!info.retentionAfterDeletion) missing.push("tempi di conservazione");
+  if (!info.retention) missing.push("tempi di conservazione");
   if (!info.providers || info.providers.length === 0) missing.push("fornitori");
   if (!info.minAge) missing.push("età minima");
   return missing;

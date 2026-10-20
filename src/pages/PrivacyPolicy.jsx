@@ -172,9 +172,10 @@ export default function PrivacyPolicy() {
 
               <Section id="conservazione" title="Per quanto tempo li conserviamo">
                 <p>
-                  Conserviamo i dati del tuo account finché l’account resta attivo. Se ne chiedi la cancellazione, li
-                  eliminiamo <Todo>{info.retentionAfterDeletion}</Todo>, tranne quelli che la legge ci obbliga a
-                  conservare. I log tecnici restano solo il tempo necessario a garantire la sicurezza del sito.
+                  Conserviamo i dati del tuo account finché lo usi e per <Todo>{info.retention}</Todo>: passato questo
+                  tempo li eliminiamo. Se chiedi prima la cancellazione, li eliminiamo entro un mese dalla richiesta. In
+                  entrambi i casi restano solo i dati che la legge ci obbliga a conservare. I log tecnici restano solo il
+                  tempo necessario a garantire la sicurezza del sito.
                 </p>
               </Section>
 
