@@ -202,6 +202,7 @@ Quell'indirizzo interroga anche il database (risponde `503` se non risponde). Te
 
 ## Cose da sapere
 
+- **Prove in locale.** Con l'indirizzo di Supabase nei User Secrets il tuo PC usa lo stesso database del sito online: va bene prima di aprirlo al pubblico, ma dopo ogni prova (utenti e sessioni di collaudo) finisce tra i dati veri. Per le prove usa un secondo progetto Supabase solo per questo, oppure PostgreSQL installato sul PC: `appsettings.Development.json` punta già a `localhost`, basta inserire la password lì e togliere la stringa dai User Secrets.
 - **Backup.** Il piano gratuito di Supabase non fa backup automatici. Ogni tanto esporta i dati (in locale: `pg_dump` con l'indirizzo *Session pooler*) o almeno conserva le migrazioni nel repository.
 - **Dati personali.** Le email e i dati degli utenti passano da Render, Supabase, Brevo e Netlify: nell'informativa privacy del sito (`src/config/privacy.js`, elenco `providers`) vanno indicati questi quattro fornitori.
 - **Segreti.** Chiave del database, chiave segreta di Supabase, `Jwt__Key`, chiave Brevo e password Admin stanno solo nelle variabili d'ambiente e nei User Secrets, mai nel repository. Se una chiave finisce in un posto sbagliato, rigenerala dal pannello del servizio e aggiornala su Render.
