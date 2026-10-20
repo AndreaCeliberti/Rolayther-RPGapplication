@@ -6,10 +6,10 @@ namespace Rolayther.Services
     // Implementazione locale su disco: usa wwwroot/uploads per i file Public (serviti da UseStaticFiles)
     // e App_Data/private-uploads per i file Private (mai esposta via file statici).
     //
-    // ATTENZIONE PER IL DEPLOY: su Render (piano free) il filesystem del container è effimero,
-    // quindi tutto ciò che viene salvato qui sparisce a ogni riavvio/redeploy. Prima di andare in
-    // produzione questa classe va sostituita con un'implementazione basata su Supabase Storage
-    // che rispetta la stessa interfaccia IFileStorageService: nient'altro nel resto del codice cambia.
+    // SOLO PER LO SVILUPPO: su Render (piano free) il filesystem del container è effimero,
+    // quindi tutto ciò che viene salvato qui sparisce a ogni riavvio/redeploy. Online si usa
+    // SupabaseFileStorageService (Storage:Provider = "Supabase"), che rispetta la stessa interfaccia
+    // IFileStorageService: nient'altro nel resto del codice cambia. Vedi docs/DEPLOY.md.
     public class LocalDiskFileStorageService : IFileStorageService
     {
         private readonly string _publicRoot;
