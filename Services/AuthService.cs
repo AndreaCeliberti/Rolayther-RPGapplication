@@ -172,7 +172,7 @@ namespace Rolayther.Services
         //service per la registrazione del player, con transazione per assicurare la coerenza dei dati tra Identity e Player.
         //Dopo il commit parte l'email di conferma: se l'invio fallisce la registrazione resta valida (EmailSent = false)
         //e l'utente può chiedere un nuovo invio.
-        public async Task<RegistrationResult> RegisterPlayerAsync(PlayerRequestDto dto)
+        public async Task<RegistrationResult> RegisterPlayerAsync(RegisterPlayerRequestDto dto)
         {
             ApplicationUser? user = null;
 
@@ -187,6 +187,7 @@ namespace Rolayther.Services
                         Name = dto.Name,
                         Surname = dto.Surname
                     };
+                    ApplyPrivacyConsent(user, dto);
 
                     var result = await _userManager.CreateAsync(user, dto.Password);
                     if (!result.Succeeded)
@@ -225,7 +226,7 @@ namespace Rolayther.Services
 
         //service per la registrazione del master, con transazione per assicurare la coerenza dei dati tra Identity e Master
 
-        public async Task<RegistrationResult> RegisterMasterAsync(MasterRequestDto dto)
+        public async Task<RegistrationResult> RegisterMasterAsync(RegisterMasterRequestDto dto)
         {
             ApplicationUser? user = null;
 
@@ -240,6 +241,7 @@ namespace Rolayther.Services
                         Name = dto.Name,
                         Surname = dto.Surname
                     };
+                    ApplyPrivacyConsent(user, dto);
                     var result = await _userManager.CreateAsync(user, dto.Password);
                     if (!result.Succeeded)
                         return RegistrationResult.Failed;
@@ -271,6 +273,19 @@ namespace Rolayther.Services
 
             var emailSent = await _emailNotifications.SendEmailConfirmationAsync(user, isMasterRequest: true);
             return new RegistrationResult(true, emailSent);
+        }
+
+        // Registra il consenso alla privacy dato in fase di iscrizione: data (UTC) e versione dell'informativa letta.
+        // Se la richiesta non lo porta (account creato da un Admin) i campi restano vuoti.
+        private static void ApplyPrivacyConsent(ApplicationUser user, IPrivacyConsentRequest dto)
+        {
+            if (!dto.PrivacyConsent)
+                return;
+
+            user.PrivacyConsentAt = DateTime.UtcNow;
+            user.PrivacyPolicyVersion = string.IsNullOrWhiteSpace(dto.PrivacyPolicyVersion)
+                ? null
+                : dto.PrivacyPolicyVersion.Trim();
         }
 
         //service per il login dell'utente

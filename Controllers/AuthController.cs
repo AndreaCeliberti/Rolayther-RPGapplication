@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Rolayther.Helpers;
 using Rolayther.Models.DTOs.Request;
 using Rolayther.Models.DTOs.Response;
 using Rolayther.Services;
@@ -24,10 +25,14 @@ namespace Rolayther.Controllers
         // ================== REGISTER ==================
         [AllowAnonymous]
         [HttpPost("register-player")]
-        public async Task<IActionResult> RegisterPlayer([FromBody] PlayerRequestDto playerRequestDto)
+        public async Task<IActionResult> RegisterPlayer([FromBody] RegisterPlayerRequestDto playerRequestDto)
         {
             if (!ModelState.IsValid)
                 return ValidationProblem(ModelState);
+
+            var consentError = CheckPrivacyConsent(playerRequestDto);
+            if (consentError is not null)
+                return consentError;
 
             try
             {
@@ -54,10 +59,14 @@ namespace Rolayther.Controllers
 
         [AllowAnonymous]
         [HttpPost("register-master")]
-        public async Task<IActionResult> RegisterMaster([FromBody] MasterRequestDto masterRequestDto)
+        public async Task<IActionResult> RegisterMaster([FromBody] RegisterMasterRequestDto masterRequestDto)
         {
             if (!ModelState.IsValid)
                 return ValidationProblem(ModelState);
+
+            var consentError = CheckPrivacyConsent(masterRequestDto);
+            if (consentError is not null)
+                return consentError;
 
             try
             {
@@ -79,6 +88,37 @@ namespace Rolayther.Controllers
                     Detail = ex.Message
                 });
             }
+        }
+
+        // Consenso al trattamento dei dati personali (informativa privacy):
+        // - chi si registra da solo deve darlo: senza, la registrazione non parte, anche se qualcuno salta la casella del sito;
+        // - un Admin che crea l'account per un'altra persona non può dare il consenso al posto suo: in quel caso
+        //   non si chiede e non si registra, e l'account resta senza consenso.
+        // Gli endpoint di registrazione sono [AllowAnonymous], ma se la richiesta porta un token valido
+        // l'utente viene riconosciuto lo stesso: è così che si distingue l'Admin.
+        // Ritorna la risposta da dare se la registrazione va fermata, altrimenti null.
+        private IActionResult? CheckPrivacyConsent(IPrivacyConsentRequest dto)
+        {
+            if (User.IsInRole(StringConstants.AdminRole))
+            {
+                dto.PrivacyConsent = false;
+                dto.PrivacyPolicyVersion = null;
+                return null;
+            }
+
+            if (dto.PrivacyConsent)
+                return null;
+
+            // Un Admin con il token scaduto sembra un visitatore: 401 (e non "manca il consenso"), così il sito
+            // rinnova il token da solo e ripete la richiesta. Un visitatore vero non manda alcun token.
+            if (Request.Headers.ContainsKey("Authorization") && User.Identity?.IsAuthenticated != true)
+                return Unauthorized();
+
+            return BadRequest(new
+            {
+                Message = "Per registrarti devi acconsentire al trattamento dei dati personali.",
+                Code = "PrivacyConsentRequired"
+            });
         }
 
 
