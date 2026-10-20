@@ -43,6 +43,11 @@ namespace Rolayther.Helpers
             var password = colon < 0 ? string.Empty : Uri.UnescapeDataString(userInfo[(colon + 1)..]);
             var database = Uri.UnescapeDataString(uri.AbsolutePath.Trim('/'));
 
+            // SSL Mode=Require: connessione cifrata. Come in PostgreSQL, con Require il driver non controlla il certificato del
+            //   server (quello di Supabase non è firmato da un'autorità pubblica): dal driver 10 non serve più aggiungere
+            //   "Trust Server Certificate", che ora non fa nulla.
+            // GSS Encryption Mode=Disable: dal driver 10 ogni nuova connessione prova prima una cifratura Kerberos (GSSAPI),
+            //   che Supabase non usa. Spegnerla evita un tentativo inutile a ogni connessione.
             var builder = new DbConnectionStringBuilder
             {
                 ["Host"] = uri.Host,
@@ -51,7 +56,7 @@ namespace Rolayther.Helpers
                 ["Username"] = user,
                 ["Password"] = password,
                 ["SSL Mode"] = "Require",
-                ["Trust Server Certificate"] = true,
+                ["GSS Encryption Mode"] = "Disable",
                 ["Maximum Pool Size"] = 10
             };
 

@@ -10,7 +10,7 @@ Il progetto gestisce sessioni di gioco, profili Player/Master e una dashboard Ad
 - Frontend: React (Vite), Axios, React-Bootstrap
 
 ## Requisiti
-- .NET SDK 8
+- .NET SDK 10 (con Visual Studio 2026; altrimenti da [dotnet.microsoft.com/download](https://dotnet.microsoft.com/download))
 - PostgreSQL (oppure un progetto gratuito su Supabase: vedi docs/DEPLOY.md)
 - Node.js LTS
 

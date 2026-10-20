@@ -58,6 +58,8 @@ Al primo avvio il backend controlla i due bucket e scrive nel log se uno manca o
 
 Le vecchie migrazioni erano scritte per SQL Server e non funzionano con PostgreSQL: si rigenerano una volta sola. Il database è **vuoto** all'inizio: i dati di prova che avevi in SQL Server locale non si spostano da soli.
 
+Il progetto usa **.NET 10** (il supporto di .NET 8 termina il 10 novembre 2026). Serve Visual Studio 2026: alla prima compilazione scarica da solo i pacchetti nuovi. Le migrazioni vanno generate **dopo** aver messo questi file sul PC, così nascono già con la versione definitiva di Entity Framework.
+
 1. **User Secrets** del progetto (Visual Studio: tasto destro sul progetto > *Manage User Secrets*). Aggiungi la stringa di connessione della sezione 1 accanto a quello che c'è già (`Jwt:Key`, `Admin:Email`, `Admin:Password`):
 
    ```json
@@ -191,6 +193,7 @@ Quell'indirizzo interroga anche il database (risponde `503` se non risponde). Te
 | *MaxClientsInSessionMode* / *too many connections* | Troppe connessioni aperte. Con l'indirizzo `postgresql://` il limite è già 10; se usi la forma `Host=...;` aggiungi `Maximum Pool Size=10`. |
 | Il servizio non parte e il log parla di `Storage:Supabase:...` | Variabile mancante o sbagliata (indirizzo senza `https://`, chiave pubblica al posto di quella segreta). Il messaggio dice quale. |
 | Il servizio non parte e il log parla di `Jwt:...` | Mancano `Jwt__Key` (almeno 16 caratteri), `Jwt__Issuer` o `Jwt__Audience`. |
+| Compilando sul PC: *NETSDK1045* «The current .NET SDK does not support targeting .NET 10.0» | Manca l'SDK di .NET 10. Con Visual Studio 2026: Visual Studio Installer > *Modifica* > carico di lavoro «ASP.NET e sviluppo Web». Visual Studio 2022 non basta. In alternativa l'SDK si scarica da [dotnet.microsoft.com/download](https://dotnet.microsoft.com/download). |
 | Nel log: *segnaposto [YOUR-PASSWORD]* | Nella stringa di connessione è rimasto il segnaposto di Supabase: sostituiscilo con la password. |
 | Nel browser: errore CORS, le richieste al backend falliscono | `Cors__AllowedOrigins` non coincide con l'indirizzo del sito (attenzione a `https` / `http`, a `www`, e a spazi). Controlla il log: la riga `CORS:` mostra cosa è stato letto. |
 | Le immagini non si vedono (404 / 403) | Il bucket `uploads` non è **pubblico** o ha un altro nome. Il log all'avvio lo dice (`[STORAGE:Supabase]`). |
@@ -206,5 +209,5 @@ Quell'indirizzo interroga anche il database (risponde `503` se non risponde). Te
 - **Backup.** Il piano gratuito di Supabase non fa backup automatici. Ogni tanto esporta i dati (in locale: `pg_dump` con l'indirizzo *Session pooler*) o almeno conserva le migrazioni nel repository.
 - **Dati personali.** Le email e i dati degli utenti passano da Render, Supabase, Brevo e Netlify: nell'informativa privacy del sito (`src/config/privacy.js`, elenco `providers`) vanno indicati questi quattro fornitori.
 - **Segreti.** Chiave del database, chiave segreta di Supabase, `Jwt__Key`, chiave Brevo e password Admin stanno solo nelle variabili d'ambiente e nei User Secrets, mai nel repository. Se una chiave finisce in un posto sbagliato, rigenerala dal pannello del servizio e aggiornala su Render.
-- **.NET 8.** Il supporto di .NET 8 termina il 10 novembre 2026: l'aggiornamento a una versione più recente va pianificato (si cambia versione nel `Dockerfile` e nel progetto).
+- **.NET 10.** È una versione a supporto lungo (LTS), garantito fino a novembre 2028. Per passare a una versione più recente si cambia il numero nel `Dockerfile` e in `Rolayther.csproj` (`TargetFramework` e pacchetti Microsoft).
 - **Swagger** è disattivato online (resta solo in sviluppo).

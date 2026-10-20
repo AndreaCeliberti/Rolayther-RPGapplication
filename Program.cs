@@ -230,7 +230,7 @@ if (!string.IsNullOrEmpty(clientIpHeader))
         options.ForwardedForHeaderName = clientIpHeader;
         options.ForwardedHeaders = ForwardedHeaders.XForwardedFor;
         options.ForwardLimit = 1;
-        options.KnownNetworks.Clear();
+        options.KnownIPNetworks.Clear();
         options.KnownProxies.Clear();
     });
 }

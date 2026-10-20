@@ -2,7 +2,7 @@
 # Due fasi: la prima compila (serve l'SDK, pesante), la seconda tiene solo il necessario per eseguire.
 
 # ---- 1) Compilazione ----
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
 # Prima solo il file di progetto: se non cambia, Docker riusa i pacchetti già scaricati e le build successive sono più veloci
@@ -13,7 +13,7 @@ COPY . ./
 RUN dotnet publish Rolayther.csproj -c Release -o /app/publish --no-restore
 
 # ---- 2) Immagine finale ----
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
 COPY --from=build /app/publish ./
 
