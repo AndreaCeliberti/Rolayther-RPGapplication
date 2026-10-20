@@ -46,8 +46,9 @@ SELECT Email, CreatedAt FROM AspNetUsers WHERE PrivacyConsentAt IS NULL;
 ## Aggiornare il database
 
 La migrazione `AddPrivacyConsent` aggiunge le due colonne a `AspNetUsers`. In sviluppo si applica da sola
-all'avvio del backend. Su un database online **non** parte da sola: esegui `dotnet ef database update` oppure,
-senza strumenti, questo script:
+all'avvio del backend. Su un database online **non** parte da sola: esegui `dotnet ef database update` (applica tutte
+le migrazioni che mancano, comprese quelle precedenti come `AddMasterApprovalStatus`) oppure, senza strumenti, questo
+script, che va bene solo se le migrazioni precedenti sono già state applicate:
 
 ```sql
 ALTER TABLE [AspNetUsers] ADD [PrivacyConsentAt] datetime2 NULL;
