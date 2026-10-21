@@ -423,9 +423,13 @@ Log.Information("Running application...");
 app.Run();
 
 }
-catch (Exception ex)
+catch (Exception ex) when (ex is not HostAbortedException)
 {
-    // Rete di sicurezza: stampa tipo, messaggio e stack trace completo di QUALSIASI eccezione
+    // HostAbortedException NON è un errore: è il modo in cui gli strumenti di Entity Framework (Add-Migration,
+    // Update-Database...) fermano l'applicazione appena è costruita. Prenderla qui significherebbe chiamare
+    // Environment.Exit, che chiude anche lo strumento prima che finisca il suo lavoro: la migrazione non nascerebbe.
+
+    // Rete di sicurezza: stampa tipo, messaggio e stack trace completo di QUALSIASI altra eccezione
     // non gestita durante l'avvio o l'esecuzione, invece di lasciar morire il processo in silenzio.
     Log.Fatal(ex, "Errore fatale non gestito durante l'avvio o l'esecuzione dell'applicazione");
     await Log.CloseAndFlushAsync();
