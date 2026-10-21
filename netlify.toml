@@ -1,0 +1,10 @@
+# Impostazioni di pubblicazione su Netlify. La guida passo passo (con Supabase, Render e Brevo) è docs/DEPLOY.md
+# del repository backend (branch master).
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  # Vite 7 richiede Node 20.19 o successivo (oppure 22.12 o successivo)
+  NODE_VERSION = "22"

@@ -32,9 +32,15 @@ export const PRIVACY_INFO = {
   // es. "un anno dopo l’ultimo utilizzo" (con l’apostrofo tipografico, come nel resto del testo)
   retention: "un anno dopo l’ultimo utilizzo",
 
-  // Servizi esterni che trattano dati per conto di Rolayther: hosting, invio delle email, archiviazione delle immagini
-  // es. [{ name: "Brevo", purpose: "invio delle email" }]
-  providers: [],
+  // Servizi esterni che trattano dati per conto di Rolayther: hosting, invio delle email, archiviazione dei file.
+  // Sono i quattro servizi della pubblicazione gratuita (docs/DEPLOY.md del backend). Se ne cambi o ne aggiungi uno,
+  // aggiorna questo elenco e PRIVACY_POLICY_VERSION. Lo scopo si legge tra parentesi accanto al nome.
+  providers: [
+    { name: "Netlify", purpose: "pubblicazione del sito" },
+    { name: "Render", purpose: "esecuzione del server" },
+    { name: "Supabase", purpose: "database e archivio dei file" },
+    { name: "Brevo", purpose: "invio delle email" },
+  ],
 
   // Età minima per iscriversi (numero). In Italia da 14 anni si può dare il consenso da soli.
   // Attenzione: il sito non controlla l'età, la dichiara soltanto.
