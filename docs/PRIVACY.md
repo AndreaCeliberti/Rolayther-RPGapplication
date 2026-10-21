@@ -32,30 +32,24 @@ Chi si è iscritto prima resta registrato con la versione che aveva visto.
 
 ## Vedere chi ha acconsentito
 
+Su Supabase: *SQL Editor* (i nomi tra virgolette doppie vanno scritti proprio così, maiuscole comprese).
+
 ```sql
 -- consensi registrati, dal più recente
-SELECT Email, PrivacyConsentAt, PrivacyPolicyVersion
-FROM AspNetUsers
-WHERE PrivacyConsentAt IS NOT NULL
-ORDER BY PrivacyConsentAt DESC;
+SELECT "Email", "PrivacyConsentAt", "PrivacyPolicyVersion"
+FROM "AspNetUsers"
+WHERE "PrivacyConsentAt" IS NOT NULL
+ORDER BY "PrivacyConsentAt" DESC;
 
 -- account senza consenso registrato
-SELECT Email, CreatedAt FROM AspNetUsers WHERE PrivacyConsentAt IS NULL;
+SELECT "Email", "CreatedAt" FROM "AspNetUsers" WHERE "PrivacyConsentAt" IS NULL;
 ```
 
 ## Aggiornare il database
 
-La migrazione `AddPrivacyConsent` aggiunge le due colonne a `AspNetUsers`. In sviluppo si applica da sola
-all'avvio del backend. Su un database online **non** parte da sola: esegui `dotnet ef database update` (applica tutte
-le migrazioni che mancano, comprese quelle precedenti come `AddMasterApprovalStatus`) oppure, senza strumenti, questo
-script, che va bene solo se le migrazioni precedenti sono già state applicate:
-
-```sql
-ALTER TABLE [AspNetUsers] ADD [PrivacyConsentAt] datetime2 NULL;
-ALTER TABLE [AspNetUsers] ADD [PrivacyPolicyVersion] nvarchar(20) NULL;
-INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
-VALUES (N'20261020083000_AddPrivacyConsent', N'8.0.22');
-```
+Le colonne `PrivacyConsentAt` e `PrivacyPolicyVersion` di `AspNetUsers` fanno parte delle migrazioni (la migrazione
+`InitialCreate` per PostgreSQL le include già). Si applicano da sole all'avvio del backend: sempre in sviluppo, online
+con `Database__InitializeOnStartup=true` (vedi [DEPLOY.md](DEPLOY.md)). A mano: `dotnet ef database update`.
 
 ## Ordine di pubblicazione
 
@@ -78,5 +72,5 @@ vecchio nessuno riuscirebbe a registrarsi finché non viene pubblicato anche que
 | Controllo del consenso (e eccezione per l'Admin) | `Controllers/AuthController.cs` (`CheckPrivacyConsent`) |
 | Dati della richiesta di registrazione | `Models/DTOs/Request/RegisterPlayerRequestDto.cs`, `RegisterMasterRequestDto.cs`, `IPrivacyConsentRequest.cs` |
 | Salvataggio di data e versione | `Services/AuthService.cs` (`ApplyPrivacyConsent`) |
-| Colonne sull'account | `Models/Entities/ApplicationUser.cs`, migrazione `Migrations/20261020083000_AddPrivacyConsent.cs` |
+| Colonne sull'account | `Models/Entities/ApplicationUser.cs`, migrazione `Migrations/20261021094633_InitialCreate.cs` |
 | Casella, pagina e testo dell'informativa (frontend) | `src/components/auth/PrivacyConsentCheck.jsx`, `src/pages/PrivacyPolicy.jsx`, `src/config/privacy.js` |

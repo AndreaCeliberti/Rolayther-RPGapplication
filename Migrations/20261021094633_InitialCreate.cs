@@ -1,12 +1,13 @@
 ﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
 namespace Rolayther.Migrations
 {
     /// <inheritdoc />
-    public partial class init : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -15,10 +16,10 @@ namespace Rolayther.Migrations
                 name: "AspNetRoles",
                 columns: table => new
                 {
-                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    Name = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
-                    NormalizedName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
-                    ConcurrencyStamp = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    Id = table.Column<string>(type: "text", nullable: false),
+                    Name = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
+                    NormalizedName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
+                    ConcurrencyStamp = table.Column<string>(type: "text", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -29,25 +30,27 @@ namespace Rolayther.Migrations
                 name: "AspNetUsers",
                 columns: table => new
                 {
-                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Surname = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
-                    UserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
-                    NormalizedUserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
-                    Email = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
-                    NormalizedEmail = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
-                    EmailConfirmed = table.Column<bool>(type: "bit", nullable: false),
-                    PasswordHash = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    SecurityStamp = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    ConcurrencyStamp = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    PhoneNumber = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    PhoneNumberConfirmed = table.Column<bool>(type: "bit", nullable: false),
-                    TwoFactorEnabled = table.Column<bool>(type: "bit", nullable: false),
-                    LockoutEnd = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
-                    LockoutEnabled = table.Column<bool>(type: "bit", nullable: false),
-                    AccessFailedCount = table.Column<int>(type: "int", nullable: false)
+                    Id = table.Column<string>(type: "text", nullable: false),
+                    Name = table.Column<string>(type: "text", nullable: false),
+                    Surname = table.Column<string>(type: "text", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: false),
+                    IsDeleted = table.Column<bool>(type: "boolean", nullable: false),
+                    PrivacyConsentAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true),
+                    PrivacyPolicyVersion = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
+                    UserName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
+                    NormalizedUserName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
+                    Email = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
+                    NormalizedEmail = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
+                    EmailConfirmed = table.Column<bool>(type: "boolean", nullable: false),
+                    PasswordHash = table.Column<string>(type: "text", nullable: true),
+                    SecurityStamp = table.Column<string>(type: "text", nullable: true),
+                    ConcurrencyStamp = table.Column<string>(type: "text", nullable: true),
+                    PhoneNumber = table.Column<string>(type: "text", nullable: true),
+                    PhoneNumberConfirmed = table.Column<bool>(type: "boolean", nullable: false),
+                    TwoFactorEnabled = table.Column<bool>(type: "boolean", nullable: false),
+                    LockoutEnd = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
+                    LockoutEnabled = table.Column<bool>(type: "boolean", nullable: false),
+                    AccessFailedCount = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -58,11 +61,11 @@ namespace Rolayther.Migrations
                 name: "Games",
                 columns: table => new
                 {
-                    GameId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Title = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    Description = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: false),
-                    CoverImageUrl = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    IsDeleted = table.Column<bool>(type: "bit", nullable: false)
+                    GameId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Title = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    Description = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: false),
+                    CoverImageUrl = table.Column<string>(type: "text", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -73,18 +76,19 @@ namespace Rolayther.Migrations
                 name: "Masters",
                 columns: table => new
                 {
-                    MasterId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Name = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    Surname = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    NickName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    MasterId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Status = table.Column<int>(type: "integer", nullable: false),
+                    Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    Surname = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    NickName = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     DateOfBirth = table.Column<DateOnly>(type: "date", nullable: false),
-                    AvatarImgUrl = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Email = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    Password = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    ConfirmPassword = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    BioMaster = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    IsDeleted = table.Column<bool>(type: "bit", nullable: false)
+                    AvatarImgUrl = table.Column<string>(type: "text", nullable: true),
+                    Email = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    Password = table.Column<string>(type: "text", nullable: false),
+                    ConfirmPassword = table.Column<string>(type: "text", nullable: false),
+                    BioMaster = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: false),
+                    IsDeleted = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -95,11 +99,11 @@ namespace Rolayther.Migrations
                 name: "Platforms",
                 columns: table => new
                 {
-                    PlatformId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Name = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    Description = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
-                    LogoUrl = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    IsDeleted = table.Column<bool>(type: "bit", nullable: false)
+                    PlatformId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    Description = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
+                    LogoUrl = table.Column<string>(type: "text", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -110,18 +114,18 @@ namespace Rolayther.Migrations
                 name: "Players",
                 columns: table => new
                 {
-                    PlayerId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Name = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    Surname = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    NickName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    PlayerId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    Surname = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    NickName = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     DateOfBirth = table.Column<DateOnly>(type: "date", nullable: false),
-                    AvatarImgUrl = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Email = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    Password = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    ConfirmPassword = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    BioPlayer = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    IsDeleted = table.Column<bool>(type: "bit", nullable: false)
+                    AvatarImgUrl = table.Column<string>(type: "text", nullable: true),
+                    Email = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    Password = table.Column<string>(type: "text", nullable: false),
+                    ConfirmPassword = table.Column<string>(type: "text", nullable: false),
+                    BioPlayer = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: false),
+                    IsDeleted = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -132,11 +136,11 @@ namespace Rolayther.Migrations
                 name: "AspNetRoleClaims",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    RoleId = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    ClaimType = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    ClaimValue = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    RoleId = table.Column<string>(type: "text", nullable: false),
+                    ClaimType = table.Column<string>(type: "text", nullable: true),
+                    ClaimValue = table.Column<string>(type: "text", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -153,11 +157,11 @@ namespace Rolayther.Migrations
                 name: "AspNetUserClaims",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    ClaimType = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    ClaimValue = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    UserId = table.Column<string>(type: "text", nullable: false),
+                    ClaimType = table.Column<string>(type: "text", nullable: true),
+                    ClaimValue = table.Column<string>(type: "text", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -174,10 +178,10 @@ namespace Rolayther.Migrations
                 name: "AspNetUserLogins",
                 columns: table => new
                 {
-                    LoginProvider = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    ProviderKey = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    ProviderDisplayName = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: false)
+                    LoginProvider = table.Column<string>(type: "text", nullable: false),
+                    ProviderKey = table.Column<string>(type: "text", nullable: false),
+                    ProviderDisplayName = table.Column<string>(type: "text", nullable: true),
+                    UserId = table.Column<string>(type: "text", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -194,8 +198,8 @@ namespace Rolayther.Migrations
                 name: "AspNetUserRoles",
                 columns: table => new
                 {
-                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    RoleId = table.Column<string>(type: "nvarchar(450)", nullable: false)
+                    UserId = table.Column<string>(type: "text", nullable: false),
+                    RoleId = table.Column<string>(type: "text", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -218,10 +222,10 @@ namespace Rolayther.Migrations
                 name: "AspNetUserTokens",
                 columns: table => new
                 {
-                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    LoginProvider = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    Name = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    Value = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    UserId = table.Column<string>(type: "text", nullable: false),
+                    LoginProvider = table.Column<string>(type: "text", nullable: false),
+                    Name = table.Column<string>(type: "text", nullable: false),
+                    Value = table.Column<string>(type: "text", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -238,13 +242,13 @@ namespace Rolayther.Migrations
                 name: "RefreshTokens",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Token = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    ExpiresAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    IsRevoked = table.Column<bool>(type: "bit", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Token = table.Column<string>(type: "text", nullable: false),
+                    UserId = table.Column<string>(type: "text", nullable: false),
+                    ExpiresAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: false),
+                    IsRevoked = table.Column<bool>(type: "boolean", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -261,12 +265,12 @@ namespace Rolayther.Migrations
                 name: "Genres",
                 columns: table => new
                 {
-                    GenreId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Name = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    Description = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: false),
-                    ImageUrl = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    GameId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    IsDeleted = table.Column<bool>(type: "bit", nullable: false)
+                    GenreId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    Description = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: false),
+                    ImageUrl = table.Column<string>(type: "text", nullable: true),
+                    GameId = table.Column<Guid>(type: "uuid", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -282,8 +286,8 @@ namespace Rolayther.Migrations
                 name: "MasterGames",
                 columns: table => new
                 {
-                    MasterId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    GameId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
+                    MasterId = table.Column<Guid>(type: "uuid", nullable: false),
+                    GameId = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -306,8 +310,8 @@ namespace Rolayther.Migrations
                 name: "MasterPlatforms",
                 columns: table => new
                 {
-                    MasterId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    PlatformId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
+                    MasterId = table.Column<Guid>(type: "uuid", nullable: false),
+                    PlatformId = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -330,18 +334,19 @@ namespace Rolayther.Migrations
                 name: "Sessions",
                 columns: table => new
                 {
-                    SessionId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    SessionTitle = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    SessionDescription = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
-                    ScheduledAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    Duration = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    NumbOfPlayer = table.Column<int>(type: "int", nullable: false),
-                    CoverImgUrl = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    MasterId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    GameId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    GenreId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    CurrentState = table.Column<int>(type: "int", nullable: false),
-                    IsDeleted = table.Column<bool>(type: "bit", nullable: false)
+                    SessionId = table.Column<Guid>(type: "uuid", nullable: false),
+                    SessionTitle = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    SessionDescription = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
+                    ScheduledAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: false),
+                    Duration = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    NumbOfPlayer = table.Column<int>(type: "integer", nullable: false),
+                    SessionLink = table.Column<string>(type: "text", nullable: true),
+                    CoverImgUrl = table.Column<string>(type: "text", nullable: true),
+                    MasterId = table.Column<Guid>(type: "uuid", nullable: false),
+                    GameId = table.Column<Guid>(type: "uuid", nullable: false),
+                    GenreId = table.Column<Guid>(type: "uuid", nullable: false),
+                    CurrentState = table.Column<int>(type: "integer", nullable: false),
+                    IsDeleted = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -367,12 +372,12 @@ namespace Rolayther.Migrations
                 name: "SessionPlayer",
                 columns: table => new
                 {
-                    PlayerId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    SessionId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
+                    SessionId = table.Column<Guid>(type: "uuid", nullable: false),
+                    PlayerId = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_SessionPlayer", x => new { x.PlayerId, x.SessionId });
+                    table.PrimaryKey("PK_SessionPlayer", x => new { x.SessionId, x.PlayerId });
                     table.ForeignKey(
                         name: "FK_SessionPlayer_Players_PlayerId",
                         column: x => x.PlayerId,
@@ -386,17 +391,41 @@ namespace Rolayther.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "SessionResourceFiles",
+                columns: table => new
+                {
+                    SessionResourceFileId = table.Column<Guid>(type: "uuid", nullable: false),
+                    SessionId = table.Column<Guid>(type: "uuid", nullable: false),
+                    FileName = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
+                    StorageKey = table.Column<string>(type: "text", nullable: false),
+                    ContentType = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    FileSizeBytes = table.Column<long>(type: "bigint", nullable: false),
+                    UploadedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: false),
+                    IsDeleted = table.Column<bool>(type: "boolean", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_SessionResourceFiles", x => x.SessionResourceFileId);
+                    table.ForeignKey(
+                        name: "FK_SessionResourceFiles_Sessions_SessionId",
+                        column: x => x.SessionId,
+                        principalTable: "Sessions",
+                        principalColumn: "SessionId",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "SessionStateHistories",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    SessionId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    FromState = table.Column<int>(type: "int", nullable: false),
-                    ToState = table.Column<int>(type: "int", nullable: false),
-                    ChangedByUserId = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    ChangedByRole = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Reason = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    ChangedAtUtc = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    SessionId = table.Column<Guid>(type: "uuid", nullable: false),
+                    FromState = table.Column<int>(type: "integer", nullable: false),
+                    ToState = table.Column<int>(type: "integer", nullable: false),
+                    ChangedByUserId = table.Column<string>(type: "text", nullable: false),
+                    ChangedByRole = table.Column<string>(type: "text", nullable: false),
+                    Reason = table.Column<string>(type: "text", nullable: true),
+                    ChangedAtUtc = table.Column<DateTime>(type: "timestamp without time zone", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -418,8 +447,7 @@ namespace Rolayther.Migrations
                 name: "RoleNameIndex",
                 table: "AspNetRoles",
                 column: "NormalizedName",
-                unique: true,
-                filter: "[NormalizedName] IS NOT NULL");
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_AspNetUserClaims_UserId",
@@ -445,8 +473,7 @@ namespace Rolayther.Migrations
                 name: "UserNameIndex",
                 table: "AspNetUsers",
                 column: "NormalizedUserName",
-                unique: true,
-                filter: "[NormalizedUserName] IS NOT NULL");
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_Genres_GameId",
@@ -469,8 +496,13 @@ namespace Rolayther.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_SessionPlayer_SessionId",
+                name: "IX_SessionPlayer_PlayerId",
                 table: "SessionPlayer",
+                column: "PlayerId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_SessionResourceFiles_SessionId",
+                table: "SessionResourceFiles",
                 column: "SessionId");
 
             migrationBuilder.CreateIndex(
@@ -523,6 +555,9 @@ namespace Rolayther.Migrations
 
             migrationBuilder.DropTable(
                 name: "SessionPlayer");
+
+            migrationBuilder.DropTable(
+                name: "SessionResourceFiles");
 
             migrationBuilder.DropTable(
                 name: "SessionStateHistories");

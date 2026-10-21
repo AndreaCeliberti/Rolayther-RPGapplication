@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Serilog.Configuration;
 using System.Linq.Expressions;
-using Azure.Identity;
 
 namespace Rolayther.Helpers
 {

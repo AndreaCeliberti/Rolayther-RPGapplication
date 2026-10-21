@@ -58,8 +58,12 @@ Il piano gratuito di Brevo permette **300 email al giorno**, più che sufficient
 
 5. Controlla che il frontend pubblicato contenga la cartella `public/email/` (le immagini delle email): vengono
    lette da `FrontendBaseUrl`, oppure da `Email__AssetsBaseUrl` se le ospiti altrove.
-6. Il backend accetta richieste solo dal sito indicato in `Program.cs` (`AddCors`, oggi `http://localhost:5173`):
-   aggiungi l'indirizzo del sito pubblicato, altrimenti la pagina di conferma non riesce a parlare con il server.
+6. Il backend accetta richieste solo dai siti elencati in `Cors__AllowedOrigins` (predefinito: `http://localhost:5173`):
+   imposta su Render l'indirizzo del sito pubblicato, altrimenti la pagina di conferma non riesce a parlare con il server.
+7. **Disattiva il blocco degli IP** in Brevo (*Impostazioni > Sicurezza > Indirizzi IP autorizzati*, per le chiavi API):
+   gli indirizzi in uscita di Render gratuito cambiano e con il blocco attivo le email verrebbero rifiutate (errore 401).
+
+Tutti i passaggi per mettere online il sito, nell'ordine giusto, sono in [DEPLOY.md](DEPLOY.md).
 
 All'avvio il backend controlla le impostazioni e **non parte** se qualcosa non torna (per esempio `Brevo` senza chiave
 API), dicendo cosa manca. Nel log trovi una riga `Email: invio reale con Brevo (mittente ...)` quando è tutto a posto.
@@ -105,10 +109,11 @@ Sezione `Email` di `appsettings.json` (o variabili d'ambiente `Email__...`).
 ### Account già esistenti
 
 Gli utenti registrati **prima** di questa funzione risultano non confermati e dovrebbero confermare l'email
-(il sito glielo propone con la striscia in alto). Se preferisci considerarli già a posto, esegui una volta sul database:
+(il sito glielo propone con la striscia in alto). Se preferisci considerarli già a posto, esegui una volta sul database
+(su Supabase: *SQL Editor*):
 
 ```sql
-UPDATE AspNetUsers SET EmailConfirmed = 1 WHERE EmailConfirmed = 0;
+UPDATE "AspNetUsers" SET "EmailConfirmed" = TRUE WHERE "EmailConfirmed" = FALSE;
 ```
 
 Per spegnere del tutto l'obbligo: `Email__RequireConfirmedEmail = false` (le email partono comunque).
@@ -130,7 +135,7 @@ Per spegnere del tutto l'obbligo: `Email__RequireConfirmedEmail = false` (le ema
 | Sintomo | Causa probabile |
 |---|---|
 | Il backend non parte e parla di `Email:Brevo:ApiKey` | `Provider` è `Brevo` ma manca la variabile `Email__Brevo__ApiKey`. |
-| Nel log compare un errore 401 di Brevo | Chiave API sbagliata, disattivata o con restrizioni di IP. |
+| Nel log compare un errore 401 di Brevo | Chiave API sbagliata o disattivata, oppure blocco degli IP attivo (*Impostazioni > Sicurezza > Indirizzi IP autorizzati*: disattivalo, vedi [DEPLOY.md](DEPLOY.md)). |
 | Brevo risponde che il mittente non è valido | `Email__FromEmail` non è stato verificato nel pannello Brevo. |
 | Le email arrivano in spam | Mittente con indirizzo gratuito o dominio non autenticato (vedi riquadro sopra). |
 | Nell'email mancano le immagini | La cartella `public/email/` non è stata pubblicata col frontend, oppure `FrontendBaseUrl`/`AssetsBaseUrl` è sbagliato (in locale non si vedono da un vero programma di posta, solo dall'anteprima). |

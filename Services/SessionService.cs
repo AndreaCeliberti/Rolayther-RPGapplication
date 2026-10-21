@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Http;
-using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Rolayther.Data;
 using Rolayther.Helpers;
@@ -228,10 +227,12 @@ namespace Rolayther.Services
             await using var tx = await _context.Database.BeginTransactionAsync();
 
             // 1) Lock della riga Session per evitare race condition sull’ultimo posto
+            //    (PostgreSQL: FOR UPDATE tiene bloccata la riga fino a COMMIT/ROLLBACK; chi arriva dopo aspetta)
             var sessionData = await _context.Sessions
                 .FromSqlInterpolated($@"
-            SELECT * FROM Sessions WITH (UPDLOCK, ROWLOCK)
-            WHERE SessionId = {sessionId}
+            SELECT * FROM ""Sessions""
+            WHERE ""SessionId"" = {sessionId}
+            FOR UPDATE
         ")
                 .Select(s => new { s.SessionId, s.NumbOfPlayer, s.CurrentState })
                 .SingleOrDefaultAsync();
@@ -246,14 +247,7 @@ namespace Rolayther.Services
             var playerExists = await _context.Players.AnyAsync(p => p.PlayerId == playerId);
             if (!playerExists) return false;
 
-            // 3) Già iscritto?
-            var alreadyIn = await _context.Database.ExecuteSqlInterpolatedAsync($@"
-        SELECT 1
-        FROM SessionPlayer
-        WHERE SessionId = {sessionId} AND PlayerId = {playerId}
-    ");
-
-            // Nota: ExecuteSql* ritorna -1 su SELECT, quindi facciamo Any via query vera:
+            // 3) Già iscritto? (query vera con Any: ExecuteSql* ritorna -1 su una SELECT)
             var alreadyJoined = await _context.Set<Dictionary<string, object>>("SessionPlayer")
                 .AnyAsync(x => EF.Property<Guid>(x, "SessionId") == sessionId &&
                                EF.Property<Guid>(x, "PlayerId") == playerId);
@@ -272,7 +266,7 @@ namespace Rolayther.Services
             try
             {
                 await _context.Database.ExecuteSqlInterpolatedAsync($@"
-            INSERT INTO SessionPlayer (SessionId, PlayerId)
+            INSERT INTO ""SessionPlayer"" (""SessionId"", ""PlayerId"")
             VALUES ({sessionId}, {playerId});
         ");
             }
@@ -320,8 +314,9 @@ namespace Rolayther.Services
             // 1) Lock della sessione (evita race tra leave/join e cambio stato)
             var sessionData = await _context.Sessions
                 .FromSqlInterpolated($@"
-            SELECT * FROM Sessions WITH (UPDLOCK, ROWLOCK)
-            WHERE SessionId = {sessionId}
+            SELECT * FROM ""Sessions""
+            WHERE ""SessionId"" = {sessionId}
+            FOR UPDATE
         ")
                 .Select(s => new { s.SessionId, s.NumbOfPlayer, s.CurrentState })
                 .SingleOrDefaultAsync();
@@ -337,8 +332,8 @@ namespace Rolayther.Services
 
             // 3) Rimuovi dalla join table
             var deleted = await _context.Database.ExecuteSqlInterpolatedAsync($@"
-        DELETE FROM SessionPlayer
-        WHERE SessionId = {sessionId} AND PlayerId = {playerId};
+        DELETE FROM ""SessionPlayer""
+        WHERE ""SessionId"" = {sessionId} AND ""PlayerId"" = {playerId};
     ");
 
             if (deleted == 0) return false; // qualcuno l'ha già rimosso in mezzo

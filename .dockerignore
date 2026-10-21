@@ -1,0 +1,16 @@
+# Cosa NON copiare dentro l'immagine Docker: compilazioni vecchie, file dell'editor, dati locali, documentazione.
+**/bin/
+**/obj/
+**/.vs/
+**/.git
+**/.gitignore
+**/.gitattributes
+**/*.user
+**/*.suo
+Logs/
+App_Data/
+wwwroot/uploads/
+docs/
+*.md
+Dockerfile
+.dockerignore
