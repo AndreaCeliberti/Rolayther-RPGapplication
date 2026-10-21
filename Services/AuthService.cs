@@ -191,7 +191,10 @@ namespace Rolayther.Services
 
                     var result = await _userManager.CreateAsync(user, dto.Password);
                     if (!result.Succeeded)
+                    {
+                        LogRegistrationRefused("player", result);
                         return RegistrationResult.Failed;
+                    }
 
                     await _userManager.AddToRoleAsync(user, "Player");
 
@@ -213,8 +216,10 @@ namespace Rolayther.Services
 
                     await transaction.CommitAsync();
                 }
-                catch
+                catch (Exception ex)
                 {
+                    // Prima l'eccezione veniva scartata: se la registrazione falliva per un errore del database non restava traccia
+                    Log.Error(ex, "Registrazione player fallita: operazione annullata");
                     await transaction.RollbackAsync();
                     return RegistrationResult.Failed;
                 }
@@ -244,7 +249,10 @@ namespace Rolayther.Services
                     ApplyPrivacyConsent(user, dto);
                     var result = await _userManager.CreateAsync(user, dto.Password);
                     if (!result.Succeeded)
+                    {
+                        LogRegistrationRefused("master", result);
                         return RegistrationResult.Failed;
+                    }
                     // Il ruolo "Master" NON viene più assegnato qui: la richiesta resta Pending
                     // finché un Admin non la approva (vedi MasterService.ApproveMaster).
                     var master = new Master
@@ -264,8 +272,10 @@ namespace Rolayther.Services
                     await _context.SaveChangesAsync();
                     await transaction.CommitAsync();
                 }
-                catch
+                catch (Exception ex)
                 {
+                    // Prima l'eccezione veniva scartata: se la registrazione falliva per un errore del database non restava traccia
+                    Log.Error(ex, "Registrazione master fallita: operazione annullata");
                     await transaction.RollbackAsync();
                     return RegistrationResult.Failed;
                 }
@@ -274,6 +284,11 @@ namespace Rolayther.Services
             var emailSent = await _emailNotifications.SendEmailConfirmationAsync(user, isMasterRequest: true);
             return new RegistrationResult(true, emailSent);
         }
+
+        // Perché Identity ha rifiutato una registrazione: nel log vanno solo i codici (per esempio DuplicateEmail,
+        // PasswordRequiresUpper), mai password né indirizzi email. Prima il motivo veniva scartato e non restava traccia.
+        private static void LogRegistrationRefused(string kind, IdentityResult result) =>
+            Log.Warning("Registrazione {Kind} rifiutata da Identity: {Errors}", kind, string.Join(", ", result.Errors.Select(e => e.Code)));
 
         // Registra il consenso alla privacy dato in fase di iscrizione: data (UTC) e versione dell'informativa letta.
         // Se la richiesta non lo porta (account creato da un Admin) i campi restano vuoti.
