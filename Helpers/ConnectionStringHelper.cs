@@ -43,6 +43,17 @@ namespace Rolayther.Helpers
             var password = colon < 0 ? string.Empty : Uri.UnescapeDataString(userInfo[(colon + 1)..]);
             var database = Uri.UnescapeDataString(uri.AbsolutePath.Trim('/'));
 
+            // Altro errore tipico: al posto di [YOUR-PASSWORD] si scrive [LaMiaPassword], tenendo le parentesi del modello.
+            // .NET le considera parte della password: al database arriva "[LaMiaPassword]" e risponde "password authentication
+            // failed". Una password che comincia con [ e finisce con ] è quasi certamente questo errore, quindi lo si dice qui.
+            if (password.Length >= 2 && password[0] == '[' && password[^1] == ']')
+            {
+                throw new FormatException(
+                    "Nella stringa di connessione la password è scritta tra parentesi quadre: sono quelle del modello di Supabase " +
+                    "([YOUR-PASSWORD]) e non fanno parte della password. Toglile: ...:LAPASSWORD@... e non ...:[LAPASSWORD]@... " +
+                    "(se la tua password contiene davvero le parentesi, usa la forma Host=...;Port=...;Database=...;Username=...;Password=...).");
+            }
+
             // SSL Mode=Require: connessione cifrata. Come in PostgreSQL, con Require il driver non controlla il certificato del
             //   server (quello di Supabase non è firmato da un'autorità pubblica): dal driver 10 non serve più aggiungere
             //   "Trust Server Certificate", che ora non fa nulla.
