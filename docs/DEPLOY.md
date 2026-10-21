@@ -25,7 +25,7 @@ Ordine consigliato, perché ogni passo ha bisogno di un indirizzo creato dal pre
 
 ## 1. Supabase: progetto e database
 
-1. [supabase.com](https://supabase.com) → **New project**. Scegli la regione **Europa** (per esempio *Frankfurt*) e usa la stessa regione per Render: le richieste tra i due sono più veloci.
+1. [supabase.com](https://supabase.com) → **New project**. Scegli una regione **Europa** (per esempio *Frankfurt* o *Ireland*): l'unica regione europea di Render è Frankfurt, quindi con Supabase in Europa le richieste tra i due restano veloci.
 2. **Database password**: scegline una fatta **solo di lettere e cifre** (niente `@ : / # ? ; = "`): finisce dentro un indirizzo e i simboli lo rompono. Conservala: Supabase non la mostra più (si può solo azzerare, in *Project Settings > Database*).
 3. Premi **Connect** (in alto) e scegli la modalità **Session pooler**, non *Direct connection*. Il motivo: Render si collega solo con IPv4, e la connessione diretta di Supabase è solo IPv6, quindi da Render non funzionerebbe. L'indirizzo ha questa forma:
 
@@ -99,7 +99,7 @@ Passaggi completi in [EMAIL.md](EMAIL.md#metterle-online-render--brevo). In brev
    |---|---|
    | Branch | `master` |
    | Language | **Docker** (il `Dockerfile` è nella cartella principale) |
-   | Region | la stessa di Supabase (Frankfurt) |
+   | Region | **Frankfurt** (l'unica europea di Render, la più vicina a Supabase in Europa) |
    | Instance Type | **Free** |
    | Health Check Path (in *Advanced*) | `/health` |
 
