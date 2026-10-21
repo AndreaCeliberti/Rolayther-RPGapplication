@@ -70,6 +70,8 @@ Il progetto usa **.NET 10** (il supporto di .NET 8 termina il 10 novembre 2026).
    }
    ```
 
+   *Manage User Secrets* apre il `secrets.json` indicato da `UserSecretsId` in `Rolayther.csproj`: la riga è già nel progetto, non cambiarla (un identificativo diverso significa un `secrets.json` diverso, vuoto).
+
    In locale i file restano su disco (`Storage:Provider` vale `Local`) e le email sono salvate come anteprime (`Email:Provider` vale `Console`): per provare non serve altro.
 2. Avvia il backend. All'avvio, in sviluppo, crea le tabelle (applica la migrazione), i ruoli e l'utente Admin (con `Admin:Email` e `Admin:Password`). Nella console deve comparire `Database PostgreSQL: aws-0-...pooler.supabase.com:5432/postgres`. In Supabase, *Table Editor*, ora ci sono `AspNetUsers`, `Sessions`, ecc.
 
@@ -189,7 +191,7 @@ Quell'indirizzo interroga anche il database (risponde `503` se non risponde). Te
 | *Tenant or user not found* | L'utente non ha il codice del progetto: con il pooler deve essere `postgres.abcdefghijkl`, non solo `postgres`. Controlla anche che l'host sia quello mostrato nella finestra *Connect*. |
 | *MaxClientsInSessionMode* / *too many connections* | Troppe connessioni aperte. Con l'indirizzo `postgresql://` il limite è già 10; se usi la forma `Host=...;` aggiungi `Maximum Pool Size=10`. |
 | Il servizio non parte e il log parla di `Storage:Supabase:...` | Variabile mancante o sbagliata (indirizzo senza `https://`, chiave pubblica al posto di quella segreta). Il messaggio dice quale. |
-| Il servizio non parte e il log parla di `Jwt:...` | Mancano `Jwt__Key` (almeno 16 caratteri), `Jwt__Issuer` o `Jwt__Audience`. |
+| Il servizio non parte e il log parla di `Jwt:...` | **Online**: mancano `Jwt__Key` (almeno 16 caratteri), `Jwt__Issuer` o `Jwt__Audience`. **Sul PC**: Visual Studio non sta leggendo i User Secrets. Controlla che `Rolayther.csproj` contenga la riga `<UserSecretsId>dc461051-dbce-4a85-9c93-392a36805b34</UserSecretsId>` (è nel repository: se manca, `git restore Rolayther.csproj`) e che il `secrets.json` di quel progetto contenga `Jwt:Key`. |
 | Compilando sul PC: errori nella cartella `Migrations` (per esempio *SqlServerModelBuilderExtensions* non esiste) | Sul PC sono rimaste le vecchie migrazioni per SQL Server (file come `20260211143247_init.cs`). In `Migrations` devono restare solo `20261021094633_InitialCreate.cs`, il suo `.Designer.cs` e `ApplicationDbContextModelSnapshot.cs`: elimina gli altri e compila di nuovo. |
 | Visual Studio si ferma con *UnauthorizedAccessException: Invalid refresh token* | È il vecchio accesso rimasto nel browser, che il database nuovo non conosce. Il codice lo gestisce (il backend risponde 401 e il sito cancella l'accesso vecchio): premi Continua (F5) e ricarica la pagina. |
 | Compilando sul PC: *NETSDK1045* «The current .NET SDK does not support targeting .NET 10.0» | Manca l'SDK di .NET 10. Con Visual Studio 2026: Visual Studio Installer > *Modifica* > carico di lavoro «ASP.NET e sviluppo Web». Visual Studio 2022 non basta. In alternativa l'SDK si scarica da [dotnet.microsoft.com/download](https://dotnet.microsoft.com/download). |
