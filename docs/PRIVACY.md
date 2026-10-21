@@ -72,5 +72,5 @@ vecchio nessuno riuscirebbe a registrarsi finché non viene pubblicato anche que
 | Controllo del consenso (e eccezione per l'Admin) | `Controllers/AuthController.cs` (`CheckPrivacyConsent`) |
 | Dati della richiesta di registrazione | `Models/DTOs/Request/RegisterPlayerRequestDto.cs`, `RegisterMasterRequestDto.cs`, `IPrivacyConsentRequest.cs` |
 | Salvataggio di data e versione | `Services/AuthService.cs` (`ApplyPrivacyConsent`) |
-| Colonne sull'account | `Models/Entities/ApplicationUser.cs`, migrazione `Migrations/20261020083000_AddPrivacyConsent.cs` |
+| Colonne sull'account | `Models/Entities/ApplicationUser.cs`, migrazione `Migrations/20261021094633_InitialCreate.cs` |
 | Casella, pagina e testo dell'informativa (frontend) | `src/components/auth/PrivacyConsentCheck.jsx`, `src/pages/PrivacyPolicy.jsx`, `src/config/privacy.js` |

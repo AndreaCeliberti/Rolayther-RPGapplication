@@ -54,9 +54,9 @@ I file caricati (avatar, copertine, materiale delle sessioni) stanno in **Storag
 
 Al primo avvio il backend controlla i due bucket e scrive nel log se uno manca o ha la visibilità sbagliata (cerca `[STORAGE:Supabase]`).
 
-## 3. Il tuo PC: tabelle e prova in locale
+## 3. Il tuo PC: prova in locale
 
-Le vecchie migrazioni erano scritte per SQL Server e non funzionano con PostgreSQL: si rigenerano una volta sola. Il database è **vuoto** all'inizio: i dati di prova che avevi in SQL Server locale non si spostano da soli.
+La cartella `Migrations` contiene già la migrazione per PostgreSQL (`InitialCreate`): non c'è niente da generare. Le vecchie migrazioni per SQL Server sono state tolte perché con PostgreSQL non funzionano. Il database è **vuoto** all'inizio: i dati di prova che avevi in SQL Server locale non si spostano da soli, e l'accesso rimasto aperto nel browser non vale più (il sito lo cancella da solo: accedi con l'Admin o registrati di nuovo).
 
 Il progetto usa **.NET 10** (il supporto di .NET 8 termina il 10 novembre 2026). Serve Visual Studio 2026: alla prima compilazione scarica da solo i pacchetti nuovi.
 
@@ -71,16 +71,12 @@ Il progetto usa **.NET 10** (il supporto di .NET 8 termina il 10 novembre 2026).
    ```
 
    In locale i file restano su disco (`Storage:Provider` vale `Local`) e le email sono salvate come anteprime (`Email:Provider` vale `Console`): per provare non serve altro.
-2. **Elimina la cartella `Migrations`** (Esplora soluzioni > tasto destro > *Elimina*).
-3. Compila il progetto, poi apri *Strumenti > Gestione pacchetti NuGet > Console di Gestione pacchetti* e scrivi:
+2. Avvia il backend. All'avvio, in sviluppo, crea le tabelle (applica la migrazione), i ruoli e l'utente Admin (con `Admin:Email` e `Admin:Password`). Nella console deve comparire `Database PostgreSQL: aws-0-...pooler.supabase.com:5432/postgres`. In Supabase, *Table Editor*, ora ci sono `AspNetUsers`, `Sessions`, ecc.
 
-   ```powershell
-   Add-Migration InitialCreate
-   ```
+   Se Visual Studio si ferma con *Invalid refresh token* è il vecchio accesso rimasto nel browser (vedi *Problemi comuni*): premi Continua (F5) e ricarica la pagina.
+3. Avvia anche il frontend e prova: registrazione, accesso, creazione di una sessione, iscrizione.
 
-   Nasce una nuova cartella `Migrations` per PostgreSQL. Questa va **nel repository**: l'applicazione online ne ha bisogno per creare le tabelle.
-4. Avvia il backend. All'avvio, in sviluppo, applica la migrazione, crea i ruoli e l'utente Admin (con `Admin:Email` e `Admin:Password`). Nella console deve comparire `Database PostgreSQL: aws-0-...pooler.supabase.com:5432/postgres`. In Supabase, *Table Editor*, ora ci sono `AspNetUsers`, `Sessions`, ecc.
-5. Avvia anche il frontend e prova: registrazione, accesso, creazione di una sessione, iscrizione.
+Quando cambierai i modelli del database (una colonna o una tabella nuova) servirà una nuova migrazione: *Strumenti > Gestione pacchetti NuGet > Console di Gestione pacchetti*, poi `Add-Migration NomeDelCambiamento`. I file nuovi vanno nel repository insieme al codice, e il backend li applica da solo all'avvio.
 
 ## 4. Brevo: email vere
 
@@ -194,7 +190,8 @@ Quell'indirizzo interroga anche il database (risponde `503` se non risponde). Te
 | *MaxClientsInSessionMode* / *too many connections* | Troppe connessioni aperte. Con l'indirizzo `postgresql://` il limite è già 10; se usi la forma `Host=...;` aggiungi `Maximum Pool Size=10`. |
 | Il servizio non parte e il log parla di `Storage:Supabase:...` | Variabile mancante o sbagliata (indirizzo senza `https://`, chiave pubblica al posto di quella segreta). Il messaggio dice quale. |
 | Il servizio non parte e il log parla di `Jwt:...` | Mancano `Jwt__Key` (almeno 16 caratteri), `Jwt__Issuer` o `Jwt__Audience`. |
-| Compilando sul PC: errori nella cartella `Migrations` (per esempio *SqlServerModelBuilderExtensions* non esiste) | Ci sono ancora le vecchie migrazioni per SQL Server. Elimina la cartella `Migrations` (sezione 3, punto 2) e compila di nuovo. |
+| Compilando sul PC: errori nella cartella `Migrations` (per esempio *SqlServerModelBuilderExtensions* non esiste) | Sul PC sono rimaste le vecchie migrazioni per SQL Server (file come `20260211143247_init.cs`). In `Migrations` devono restare solo `20261021094633_InitialCreate.cs`, il suo `.Designer.cs` e `ApplicationDbContextModelSnapshot.cs`: elimina gli altri e compila di nuovo. |
+| Visual Studio si ferma con *UnauthorizedAccessException: Invalid refresh token* | È il vecchio accesso rimasto nel browser, che il database nuovo non conosce. Il codice lo gestisce (il backend risponde 401 e il sito cancella l'accesso vecchio): premi Continua (F5) e ricarica la pagina. |
 | Compilando sul PC: *NETSDK1045* «The current .NET SDK does not support targeting .NET 10.0» | Manca l'SDK di .NET 10. Con Visual Studio 2026: Visual Studio Installer > *Modifica* > carico di lavoro «ASP.NET e sviluppo Web». Visual Studio 2022 non basta. In alternativa l'SDK si scarica da [dotnet.microsoft.com/download](https://dotnet.microsoft.com/download). |
 | Nel log: *segnaposto [YOUR-PASSWORD]* oppure *la password è scritta tra parentesi quadre* | Nella stringa di connessione è rimasto il modello di Supabase. Al posto di `[YOUR-PASSWORD]` va la password **senza parentesi**: `...:LaMiaPassword@...`, non `...:[LaMiaPassword]@...`. |
 | Nel browser: errore CORS, le richieste al backend falliscono | `Cors__AllowedOrigins` non coincide con l'indirizzo del sito (attenzione a `https` / `http`, a `www`, e a spazi). Controlla il log: la riga `CORS:` mostra cosa è stato letto. |
