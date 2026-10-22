@@ -400,9 +400,13 @@ app.MapControllers();
 // Controlli di salute. /health risponde subito, senza toccare il database (lo usa Render per sapere che il server è vivo).
 // /health/db interroga anche il database: è l'indirizzo da far chiamare al servizio di ping (per esempio UptimeRobot)
 // ogni 5 minuti, così il server di Render gratuito non si addormenta e il progetto Supabase non va in pausa per inattività.
-app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
+// Rispondono sia a GET sia a HEAD: il monitor "HTTP(s)" di UptimeRobot (piano gratuito) controlla solo con HEAD, e con una
+// route solo-GET riceverebbe 405 e segnerebbe "Down" anche a servizio funzionante. Per HEAD il corpo non viene inviato.
+var healthMethods = new[] { HttpMethods.Get, HttpMethods.Head };
 
-app.MapGet("/health/db", async (ApplicationDbContext db) =>
+app.MapMethods("/health", healthMethods, () => Results.Ok(new { status = "ok" }));
+
+app.MapMethods("/health/db", healthMethods, async (ApplicationDbContext db) =>
 {
     try
     {
