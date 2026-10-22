@@ -166,7 +166,7 @@ Senza visite per 15 minuti Render addormenta il backend (primo accesso lento) e 
 https://rolayther-api.onrender.com/health/db
 ```
 
-Quell'indirizzo interroga anche il database (risponde `503` se non risponde). Tenere il servizio sempre sveglio consuma quasi tutte le 750 ore gratuite del mese: va bene con un solo servizio. Senza ping tutto funziona lo stesso, solo con l'attesa della prima visita.
+Quell'indirizzo interroga anche il database (risponde `503` se non risponde). Risponde sia a GET sia a HEAD: il monitor *HTTP(s)* gratuito di UptimeRobot controlla con HEAD (cambiare metodo è una funzione a pagamento), quindi con un backend che accettasse solo GET lo segnerebbe *Down* con errore 405. Tenere il servizio sempre sveglio consuma quasi tutte le 750 ore gratuite del mese: va bene con un solo servizio. Senza ping tutto funziona lo stesso, solo con l'attesa della prima visita.
 
 ## 9. Prova finale
 
@@ -200,6 +200,7 @@ Quell'indirizzo interroga anche il database (risponde `503` se non risponde). Te
 | Le immagini non si vedono (404 / 403) | Il bucket `uploads` non è **pubblico** o ha un altro nome. Il log all'avvio lo dice (`[STORAGE:Supabase]`). |
 | Il caricamento file dà errore 500 | Nel log cerca `[STORAGE:Supabase]`: di solito chiave segreta sbagliata (403) o bucket mancante. |
 | Il primo accesso dopo una pausa è lentissimo | È l'addormentamento di Render (circa un minuto). Vedi sezione 8. |
+| UptimeRobot segna *Down* con «405 Method Not Allowed», ma aprendo l'indirizzo nel browser tutto funziona | Il backend in funzione è una versione precedente, che risponde ai controlli solo con GET, mentre il monitor *HTTP(s)* usa HEAD. Aggiornalo all'ultima versione di `master`. Nel frattempo puoi usare un monitor di tipo *Keyword* (usa GET): stesso indirizzo, parola `"database":"ok"` con le virgolette, allarme quando la parola **non** compare. |
 | Il login risponde 429 | Il limite è di 10 tentativi al minuto per visitatore (IP). Se capita a più utenti insieme, il backend non sta distinguendo i visitatori: `Hosting__ClientIpHeader` deve valere `CF-Connecting-IP` (lo imposta il `Dockerfile`; controlla di non averlo sovrascritto su Render). |
 | Le email non arrivano o il log dice 401 di Brevo | Chiave sbagliata, mittente non verificato o blocco degli IP attivo (sezione 4). Altri casi in [EMAIL.md](EMAIL.md#problemi-comuni). |
 | Supabase dice *project paused* | Era inattivo da più di 7 giorni. Dal pannello si riattiva (*Restore project*). Il ping della sezione 8 lo evita. |
